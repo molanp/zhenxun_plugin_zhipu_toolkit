@@ -52,12 +52,12 @@ draw_video = on_alconna(
 )
 
 @draw.handle()
-async def _(msg: Match[str], size: Match[str]):
+async def _(msg: Match[str]):
     if msg.available:
         draw.set_path_arg("msg", msg.result)
 
 @draw_video.handle()
-async def _(message: Match[str], size: Match[str]):
+async def _(message: Match[str]):
     if message.available:
         draw.set_path_arg("message", message.result)
 
@@ -73,7 +73,7 @@ async def handle_check(msg: str):
         )
         await draw.send(Image(url=response.data[0].url), reply_to=True)
     except Exception as e:
-        await draw.send(Text(f"错了：{e}"))
+        await draw.send(Text(f"错了：{e}"), reply_to=True)
 
 @draw_video.got_path("message", prompt="你要制作什么视频呢")
 async def submit_task(message: str):
@@ -83,17 +83,17 @@ async def submit_task(message: str):
         await draw_video.send(Text(str(e)))
     else:
         if response.task_status != "FAIL":
-            await draw_video.send(Text(f"任务已提交,id: {response.id}"))
+            await draw_video.send(Text(f"任务已提交,id: {response.id}"), reply_to=True)
             # 启动异步任务检查状态
             asyncio.create_task(
                 check_task_status_periodically(response.id, draw_video))
         else:
-            await draw_video.send(Text(f"任务提交失败，e:{response}"))
+            await draw_video.send(Text(f"任务提交失败，e:{response}"), reply_to=True)
 
 
 async def submit_task_to_zhipuai(message: str):
     return client.videos.generations(
-        model="cogvideox-flash",  # 替换为适当的模型编码
+        model="cogvideox-flash",
         prompt=message,
         with_audio=True,
     )
