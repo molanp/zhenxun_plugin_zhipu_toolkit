@@ -1,0 +1,2 @@
+# zhenxun_plugin_zhipu_toolkit
+智谱AI全家桶插件，包含智谱平台多种功能
