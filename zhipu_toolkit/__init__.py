@@ -1,4 +1,3 @@
-import re
 from zhipuai import ZhipuAI
 from zhenxun.configs.utils import PluginExtraData, RegisterConfig
 from zhenxun.configs.config import Config
