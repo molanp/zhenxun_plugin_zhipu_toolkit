@@ -5,6 +5,7 @@
 
 > [!IMPORTANT]
 > 插件需要智谱AI的API KEY，请先在插件配置中设置
+>
 > 插件使用平台的免费模型，只需注册即可，无任何花费
 
 ## 圣经
@@ -18,7 +19,7 @@
 
 注册/登录后，访问[此链接](https://bigmodel.cn/usercenter/proj-mgmt/apikeys)即可看到你的`API KEY`,复制后填写即可
 
-**温馨提示:**把鼠标移至TOKEN上，会出现复制按钮，点击即可
+**温馨提示:** 把鼠标移至TOKEN上，会出现复制按钮，点击即可
 ![image](https://github.com/user-attachments/assets/949de9e7-07c8-4451-9d22-a0fd3d5190a9)
 
 ## ✨ 功能
