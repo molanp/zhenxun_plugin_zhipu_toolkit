@@ -40,12 +40,13 @@ class ChatManager:
 
     @classmethod
     async def check_token(cls, uid: str, token_len: int):
+        return #暂时没用，文档似乎说是单条token4095
         if cls.chat_history_token.get(uid) is None:
             cls.chat_history_token[uid] = 0
         cls.chat_history_token[uid] += token_len
         # 检查是否超限
         user_history = cls.chat_history.get(uid, [])
-        while cls.chat_history_token[uid] > 4096 and len(user_history) > 1:
+        while cls.chat_history_token[uid] > 4095 and len(user_history) > 1:
             # 计算要删除的历史项的token长度
             removed_token_len = len(user_history[1]["content"])
             user_history = user_history[1:]
@@ -57,6 +58,8 @@ class ChatManager:
     @classmethod
     async def send_message(cls, words: str, user_id: int, role="user") -> str:
         uid = str(user_id)
+        if len(words) > 4095: 
+           return "超出最大token限制: 4095"
         await cls.add_message(words, user_id)
         loop = asyncio.get_event_loop()
         try:
