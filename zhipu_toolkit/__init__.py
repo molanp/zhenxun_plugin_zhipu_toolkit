@@ -1,3 +1,4 @@
+import re
 from zhipuai import ZhipuAI
 from zhenxun.configs.utils import PluginExtraData, RegisterConfig
 from zhenxun.configs.config import Config
@@ -34,12 +35,10 @@ __plugin_meta__ = PluginMetadata(
 )
 
 api_key = Config.get_config("zhipu_toolkit", "API_KEY", None)
-if api_key is None:
-    raise ValueError("请先设置智谱AI的APIKEY")
 
 client = ZhipuAI(api_key=api_key)
 
-draw = on_alconna(
+draw_pic = on_alconna(
     Alconna("生成图片", Args["msg?", str, "all"]),
     priority=5,
     block=True
@@ -51,18 +50,20 @@ draw_video = on_alconna(
     block=True
 )
 
-@draw.handle()
+@draw_pic.handle()
 async def _(msg: Match[str]):
     if msg.available:
-        draw.set_path_arg("msg", msg.result)
+        draw_pic.set_path_arg("msg", msg.result)
 
 @draw_video.handle()
 async def _(message: Match[str]):
     if message.available:
-        draw.set_path_arg("message", message.result)
+        draw_video.set_path_arg("message", message.result)
 
-@draw.got_path("msg", prompt="你要画什么呢")
+@draw_pic.got_path("msg", prompt="你要画什么呢")
 async def handle_check(msg: str):
+    if api_key is None:
+        await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     try:
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
@@ -71,9 +72,9 @@ async def handle_check(msg: str):
                 prompt=msg,
                 size="1440x720")
         )
-        await draw.send(Image(url=response.data[0].url), reply_to=True)
+        await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
     except Exception as e:
-        await draw.send(Text(f"错了：{e}"), reply_to=True)
+        await draw_pic.send(Text(f"错了：{e}"), reply_to=True)
 
 @draw_video.got_path("message", prompt="你要制作什么视频呢")
 async def submit_task(message: str):
