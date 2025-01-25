@@ -25,15 +25,15 @@ __plugin_meta__ = PluginMetadata(
         configs=[
             RegisterConfig(
                 key="API_KEY",
-                value=None,
+                value="",
                 help="智谱AI平台的APIKEY",
-                default_value=None,
+                default_value="",
             )
         ],
     ).dict(),
 )
 
-api_key = Config.get_config("zhipu_toolkit", "API_KEY", None)
+api_key = Config.get_config("zhipu_toolkit", "API_KEY", "")
 
 client = ZhipuAI(api_key=api_key)
 
@@ -61,7 +61,7 @@ async def _(message: Match[str]):
 
 @draw_pic.got_path("msg", prompt="你要画什么呢")
 async def handle_check(msg: str):
-    if api_key is None:
+    if api_key == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
@@ -78,7 +78,7 @@ async def handle_check(msg: str):
 
 @draw_video.got_path("message", prompt="你要制作什么视频呢")
 async def submit_task(message: str):
-    if api_key is None:
+    if api_key == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
