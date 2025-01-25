@@ -116,7 +116,7 @@ async def check_task_status_periodically(task_id: str, m):
                     url=response.video_result[0].url))
                 break
             elif response.task_status == "FAIL":
-                await m.send(Text("生成失败了..", reply_to=True))
+                await m.send(Text("生成失败了.."), reply_to=True)
             await asyncio.sleep(5)
 
 
