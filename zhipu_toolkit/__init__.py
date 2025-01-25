@@ -79,7 +79,7 @@ async def handle_check(msg: str):
 @draw_video.got_path("message", prompt="你要制作什么视频呢")
 async def submit_task(message: str):
     if api_key == "":
-        await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
+        await draw_video.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
             response = await submit_task_to_zhipuai(message)
