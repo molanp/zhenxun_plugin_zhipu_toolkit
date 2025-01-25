@@ -38,13 +38,13 @@ api_key = Config.get_config("zhipu_toolkit", "API_KEY", "")
 client = ZhipuAI(api_key=api_key)
 
 draw_pic = on_alconna(
-    Alconna("生成图片", Args["msg?", str, "all"]),
+    Alconna("生成图片", Args["msg?", str]),
     priority=5,
     block=True
 )
 
 draw_video = on_alconna(
-    Alconna("生成视频", Args["message?", str, "all"]),
+    Alconna("生成视频", Args["message?", str]),
     priority=5,
     block=True
 )
