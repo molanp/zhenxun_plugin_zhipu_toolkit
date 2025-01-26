@@ -27,7 +27,7 @@ async def hello() -> list:
         )
     )
     img = random.choice(os.listdir(IMAGE_PATH / "zai"))
-    [result, str(IMAGE_PATH / "zai" / img)]
+    return [result, str(IMAGE_PATH / "zai" / img)]
 
 async def check_task_status_periodically(task_id: str, action):
     while True:
