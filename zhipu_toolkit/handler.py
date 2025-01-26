@@ -48,7 +48,7 @@ async def _(event: Event):
     else:
         user_id = event.get_user_id()
         message = event.get_plaintext()
-        if message is None or message == :
+        if message is None or message == "":
            result = await hello()
            await chat.send(
               Message(
