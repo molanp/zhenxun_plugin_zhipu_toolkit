@@ -54,7 +54,8 @@ async def _(event: Event):
               Message(
                  MessageSegment.text(result[0]),
                  MessageSegment.image(result[1])
-              )
+              ),
+              at_sender=True
            )
         else:
            await chat.send(
