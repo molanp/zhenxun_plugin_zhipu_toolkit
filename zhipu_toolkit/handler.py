@@ -87,7 +87,7 @@ async def handle_check(msg: str):
     else:
         try:
             loop = asyncio.get_event_loop()
-            client = ZhipuAI(api_key=api_key)
+            client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
             response = await loop.run_in_executor(
                 None,
                 lambda: client.images.generations(
