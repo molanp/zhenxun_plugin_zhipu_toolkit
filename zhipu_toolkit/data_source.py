@@ -82,7 +82,9 @@ class ChatManager:
             response = await loop.run_in_executor(
                 None,
                 lambda: client.chat.completions.create(
-                    model="glm-4-flash", messages=cls.chat_history[uid]
+                    model="glm-4-flash",
+                    messages=cls.chat_history[uid],
+                    user_id=uid
                 ),
             )
         except Exception as e:
