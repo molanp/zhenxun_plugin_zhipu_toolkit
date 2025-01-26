@@ -13,6 +13,7 @@ from .data_source import (
     ChatManager,
     check_task_status_periodically,
     submit_task_to_zhipuai,
+    hello
 )
 
 draw_pic = on_alconna(Alconna("生成图片", Args["msg?", str]), priority=5, block=True)
@@ -47,14 +48,23 @@ async def _(event: Event):
     else:
         user_id = event.get_user_id()
         message = event.get_plaintext()
-        await chat.send(
-            Message(
-                MessageSegment.text(
-                    await ChatManager.send_message(message, int(user_id))
-                )
-            ),
-            at_sender=True,
-        )
+        if message is None or message == :
+           result = await hello()
+           await chat.send(
+              Message(
+                 MessageSegment.text(result[0]),
+                 MessageSegment.image(result[1])
+              )
+           )
+        else:
+           await chat.send(
+               Message(
+                   MessageSegment.text(
+                       await ChatManager.send_message(message, int(user_id))
+                   )
+               ),
+               at_sender=True,
+           )
 
 
 @clear_my_chat.handle()

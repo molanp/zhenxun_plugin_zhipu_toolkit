@@ -1,5 +1,8 @@
 import asyncio
-
+import random
+import os
+from zhenxun.configs.path_config import IMAGE_PATH
+from zhenxun.configs.config import BotConfig
 from nonebot_plugin_alconna import Text, Video
 
 from .config import client, soul
@@ -12,6 +15,19 @@ async def submit_task_to_zhipuai(message: str):
         with_audio=True,
     )
 
+async def hello() -> list:
+    """一些打招呼的内容"""
+    result = random.choice(
+        (
+            "哦豁？！",
+            "你好！Ov<",
+            f"库库库，呼唤{BotConfig.self_nickname}做什么呢",
+            "我在呢！",
+            "呼呼，叫俺干嘛",
+        )
+    )
+    img = random.choice(os.listdir(IMAGE_PATH / "zai"))
+    [result, IMAGE_PATH / "zai" / img]
 
 async def check_task_status_periodically(task_id: str, action):
     while True:
