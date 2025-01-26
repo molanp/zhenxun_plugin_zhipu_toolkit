@@ -2,13 +2,14 @@ import asyncio
 
 from arclet.alconna import Alconna, Args
 from nonebot import on_message, require
+from zhipuai import ZhipuAI
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import Event, Message, MessageSegment
 from nonebot.rule import to_me
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 
-from .config import api_key, client
+from .config import ChatConfig
 from .data_source import (
     ChatManager,
     check_task_status_periodically,
@@ -24,8 +25,11 @@ draw_video = on_alconna(
 
 chat = on_message(rule=to_me(), priority=999, block=True)
 
-clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
-
+clear_my_chat = on_alconna(
+   Alconna("清理我的会话"),
+   priority=5,
+   block=True
+)
 
 @draw_pic.handle()
 async def _(msg: Match[str]):
@@ -41,7 +45,7 @@ async def _(message: Match[str]):
 
 @chat.handle()
 async def _(event: Event):
-    if api_key == "":
+    if ChatConfig.get("API_KEY") == "":
         await chat.send(
             Message(MessageSegment.text("请先设置智谱AI的APIKEY!")), at_sender=True
         )
@@ -78,11 +82,12 @@ async def _(event: Event):
 
 @draw_pic.got_path("msg", prompt="你要画什么呢")
 async def handle_check(msg: str):
-    if api_key == "":
+    if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
             loop = asyncio.get_event_loop()
+            client = ZhipuAI(api_key=api_key)
             response = await loop.run_in_executor(
                 None,
                 lambda: client.images.generations(
@@ -96,7 +101,7 @@ async def handle_check(msg: str):
 
 @draw_video.got_path("message", prompt="你要制作什么视频呢")
 async def submit_task(message: str):
-    if api_key == "":
+    if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:

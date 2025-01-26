@@ -1,11 +1,12 @@
 import asyncio
 import random
 import os
+from zhipuai import ZhipuAI
 from zhenxun.configs.path_config import IMAGE_PATH
 from zhenxun.configs.config import BotConfig
 from nonebot_plugin_alconna import Text, Video
 
-from .config import client, soul
+from .config import ChatConfig
 
 
 async def submit_task_to_zhipuai(message: str):
@@ -46,13 +47,13 @@ async def check_task_status_periodically(task_id: str, action):
 
 
 async def check_task_status_from_zhipuai(task_id: str):
+    client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
     return client.videos.retrieve_videos_result(id=task_id)
 
 
 class ChatManager:
     chat_history = {}  # noqa: RUF012
     chat_history_token = {}  # noqa: RUF012
-    system_soul = {"role": "system", "content": soul}  # noqa: RUF012
 
     @classmethod
     async def check_token(cls, uid: str, token_len: int):
@@ -78,6 +79,7 @@ class ChatManager:
            return "超出最大token限制: 4095"
         await cls.add_message(words, user_id)
         loop = asyncio.get_event_loop()
+        client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         try:
             response = await loop.run_in_executor(
                 None,
@@ -97,7 +99,7 @@ class ChatManager:
     async def add_message(cls, words: str, user_id: int, role="user"):
         uid = str(user_id)
         if cls.chat_history.get(uid) is None:
-            cls.chat_history[uid] = [cls.system_soul]
+            cls.chat_history[uid] = [{"role": "system", "content": ChatConfig.get("SOUL")}]
         cls.chat_history[uid].append({"role": role, "content": words})
         await cls.check_token(uid, len(words))
 

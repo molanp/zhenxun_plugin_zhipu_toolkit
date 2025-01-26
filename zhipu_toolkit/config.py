@@ -1,7 +1,15 @@
-from zhipuai import ZhipuAI
-
 from zhenxun.configs.config import Config
 
-api_key = Config.get_config("zhipu_toolkit", "API_KEY", "")
-soul = Config.get_config("zhipu_toolkit", "SOUL", "你是真寻，你强大且无所不能")
-client = ZhipuAI(api_key=api_key)
+class ChatConfig:
+   default = {
+      "API_KEY": "",
+      "SOUL": "你是真寻，你强大且无所不能"
+   }
+   @classmethod
+   def get(cls, key: str):
+      key = key.upper()
+      return Config.get_config(
+         "zhipu_toolkit",
+         key,
+         cls.default.get(key)
+      )
