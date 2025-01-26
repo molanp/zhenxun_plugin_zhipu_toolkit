@@ -51,10 +51,10 @@ async def _(event: Event):
         if message is None or message == "":
            result = await hello()
            await chat.send(
-              Message(
+              Message([
                  MessageSegment.text(result[0]),
                  MessageSegment.image(result[1])
-              ),
+              ]),
               at_sender=True
            )
         else:
