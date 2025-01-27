@@ -10,6 +10,7 @@ from .config import ChatConfig
 
 
 async def submit_task_to_zhipuai(message: str):
+    client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
     return client.videos.generations(
         model="cogvideox-flash",
         prompt=message,
