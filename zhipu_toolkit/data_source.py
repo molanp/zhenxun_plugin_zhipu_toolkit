@@ -74,7 +74,7 @@ class ChatManager:
         cls.chat_history[uid] = user_history
 
     @classmethod
-    async def send_message(cls, words: str, user_id: int, role="user") -> str:
+    async def send_message(cls, words: str, user_id: int) -> str:
         uid = str(user_id)
         if len(words) > 4095: 
            return "超出最大token限制: 4095"
