@@ -47,10 +47,9 @@ async def _(message: Match[str]):
 async def _(event: Event):
     if ChatConfig.get("API_KEY") == "":
         await chat.send(
-            Message(MessageSegment.text("请先设置智谱AI的APIKEY!")), at_sender=True
+            Message(MessageSegment.text("请先设置智谱AI的APIKEY!")), reply_message=True
         )
     else:
-        user_id = event.get_user_id()
         message = event.get_plaintext()
         if message is None or message == "":
            result = await hello()
@@ -59,24 +58,23 @@ async def _(event: Event):
                  MessageSegment.text(result[0]),
                  MessageSegment.image(result[1])
               ]),
-              at_sender=True
+              reply_message=True
            )
         else:
            await chat.send(
                Message(
                    MessageSegment.text(
-                       await ChatManager.send_message(message, int(user_id))
+                       await ChatManager.send_message(event)
                    )
-               ),
-               at_sender=True,
+               ), reply_message=True
            )
 
 
 @clear_my_chat.handle()
 async def _(event: Event):
-    uid = int(event.get_user_id())
+    uid = str(event.sender.user_id)
     await clear_my_chat.send(
-        Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据")
+        Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"), reply_to=True
     )
 
 
