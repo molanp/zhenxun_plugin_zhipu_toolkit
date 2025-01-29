@@ -91,7 +91,7 @@ class ChatManager:
                 ),
             )
         except Exception as e:
-            return f"Error: {e!s}"
+            return f"Error: {e!s}"+"\n清理对话记录请发送'清理我的会话'"
         result = response.choices[0].message.content  # type: ignore
         await cls.add_message(result, user_id, role="assistant")  # type: ignore
         return result # type: ignore
