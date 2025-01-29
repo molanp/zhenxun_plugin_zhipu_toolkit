@@ -101,7 +101,7 @@ class ChatManager:
     @classmethod
     async def add_message(cls, words: str, uid: str, role="user"):
         if cls.chat_history.get(uid) is None:
-            cls.chat_history[uid] = [{"role": "system", "content": "对话开头的[a|b]中，a为对话者昵称，b为当前时间" + ChatConfig.get("SOUL")}]
+            cls.chat_history[uid] = [{"role": "system", "content": "对话开头的[a|b]中，a为对话者昵称，b为当前时间;" + ChatConfig.get("SOUL")}]
         cls.chat_history[uid].append({"role": role, "content": words})
         await cls.check_token(uid, len(words))
 
