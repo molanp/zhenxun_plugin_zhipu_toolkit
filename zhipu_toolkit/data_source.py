@@ -77,7 +77,8 @@ class ChatManager:
     @classmethod
     async def send_message(cls, event: Event) -> str:
         uid = str(event.sender.user_id)
-        words = f"[{event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname}|{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}]{event.get_plaintext()}"
+        user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)[:10]
+        words = f"［{user_name}］〘 {datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}〙: {event.get_plaintext()}"
         if len(words) > 4095:
             return "超出最大token限制: 4095"
         await cls.add_message(words, uid)
@@ -93,7 +94,7 @@ class ChatManager:
                 ),
             )
         except Exception as e:
-            return f"Error: {e!s}" + "\n清理对话记录请发送'清理我的会话'"
+            return f"Error: {e!s}" + "\n\n如需清理对话记录，请发送'清理我的会话'"
         result = response.choices[0].message.content  # type: ignore
         await cls.add_message(result, uid, role="assistant")  # type: ignore
         return result  # type: ignore
@@ -101,7 +102,14 @@ class ChatManager:
     @classmethod
     async def add_message(cls, words: str, uid: str, role="user"):
         if cls.chat_history.get(uid) is None:
-            cls.chat_history[uid] = [{"role": "system", "content": "对话开头的[a|b]中，a为对话者昵称，b为当前时间;" + ChatConfig.get("SOUL")}]
+            cls.chat_history[uid] = [{
+               "role": "system", 
+               "content": (
+                   "对话者发送的格式：'［名字］〘时间〙: 内容'。\n"
+                   "注意：长名字会被截断，回复时不要提及上述格式，但是你可以从中获取信息。"
+                   + ChatConfig.get("SOUL")
+               )
+           }]
         cls.chat_history[uid].append({"role": role, "content": words})
         await cls.check_token(uid, len(words))
 
