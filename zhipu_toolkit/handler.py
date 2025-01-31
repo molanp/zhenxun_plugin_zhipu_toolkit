@@ -1,6 +1,6 @@
 import asyncio
 
-from arclet.alconna import Alconna, Args
+from arclet.alconna import Alconna, Args, CommandMeta
 from nonebot import on_message, require
 from zhipuai import ZhipuAI
 
@@ -14,33 +14,36 @@ from .data_source import (
     ChatManager,
     check_task_status_periodically,
     submit_task_to_zhipuai,
-    hello
+    hello,
 )
 
-draw_pic = on_alconna(Alconna("生成图片", Args["msg?", str]), priority=5, block=True)
+draw_pic = on_alconna(
+    Alconna("生成图片", Args["msg?", str], meta=CommandMeta(compact=True)),
+    priority=5,
+    block=True,
+)
 
 draw_video = on_alconna(
-    Alconna("生成视频", Args["message?", str]), priority=5, block=True
+    Alconna("生成视频", Args["message?", str], meta=CommandMeta(compact=True)),
+    priority=5,
+    block=True,
 )
 
 chat = on_message(rule=to_me(), priority=999, block=True)
 
-clear_my_chat = on_alconna(
-   Alconna("清理我的会话"),
-   priority=5,
-   block=True
-)
+clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
+
 
 @draw_pic.handle()
 async def _(msg: Match[str]):
     if msg.available:
-        draw_pic.set_path_arg("msg", msg.result)
+        draw_pic.set_path_arg("msg", str(msg.result))
 
 
 @draw_video.handle()
 async def _(message: Match[str]):
     if message.available:
-        draw_video.set_path_arg("message", message.result)
+        draw_video.set_path_arg("message", str(message.result))
 
 
 @chat.handle()
@@ -52,29 +55,26 @@ async def _(event: Event):
     else:
         message = event.get_plaintext()
         if message is None or message == "":
-           result = await hello()
-           await chat.send(
-              Message([
-                 MessageSegment.text(result[0]),
-                 MessageSegment.image(result[1])
-              ]),
-              reply_message=True
-           )
+            result = await hello()
+            await chat.send(
+                Message(
+                    [MessageSegment.text(result[0]), MessageSegment.image(result[1])]
+                ),
+                reply_message=True,
+            )
         else:
-           await chat.send(
-               Message(
-                   MessageSegment.text(
-                       await ChatManager.send_message(event)
-                   )
-               ), reply_message=True
-           )
+            await chat.send(
+                Message(MessageSegment.text(await ChatManager.send_message(event))),
+                reply_message=True,
+            )
 
 
 @clear_my_chat.handle()
 async def _(event: Event):
     uid = str(event.sender.user_id)
     await clear_my_chat.send(
-        Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"), reply_to=True
+        Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"),
+        reply_to=True,
     )
 
 
