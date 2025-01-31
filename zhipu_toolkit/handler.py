@@ -1,6 +1,6 @@
 import asyncio
 
-from arclet.alconna import Alconna, Args, CommandMeta
+from arclet.alconna import Alconna, Args, CommandMeta, AllParam
 from nonebot import on_message, require
 from zhipuai import ZhipuAI
 
@@ -18,13 +18,13 @@ from .data_source import (
 )
 
 draw_pic = on_alconna(
-    Alconna("生成图片", Args["msg?", str], meta=CommandMeta(compact=True)),
+    Alconna("生成图片", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
     priority=5,
     block=True,
 )
 
 draw_video = on_alconna(
-    Alconna("生成视频", Args["message?", str], meta=CommandMeta(compact=True)),
+    Alconna("生成视频", Args["message?", AllParam], meta=CommandMeta(compact=True)),
     priority=5,
     block=True,
 )
