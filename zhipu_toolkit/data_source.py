@@ -105,8 +105,8 @@ class ChatManager:
             cls.chat_history[uid] = [{
                "role": "system", 
                "content": (
-                   "对话者发送的格式：'［名字］〘时间〙: 内容'。\n"
-                   "注意：长名字会被截断，回复时不要提及上述格式，但是你可以从中获取信息。"
+                   "对话者发送的消息格式如下：'［名字］〘时间〙: 内容'。\n"
+                   "注意：长名字会被截断。"
                    + ChatConfig.get("SOUL")
                )
            }]
