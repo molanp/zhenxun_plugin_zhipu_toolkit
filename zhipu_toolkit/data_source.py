@@ -78,7 +78,7 @@ class ChatManager:
     async def send_message(cls, event: Event) -> str:
         uid = str(event.sender.user_id)
         user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)[:10]
-        words = f"［{user_name}］〘 {datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}〙: {event.get_plaintext()}"
+        words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}，你要称呼我为'{user_name}'。 {event.get_plaintext()}"
         if len(words) > 4095:
             return "超出最大token限制: 4095"
         await cls.add_message(words, uid)
@@ -104,11 +104,8 @@ class ChatManager:
         if cls.chat_history.get(uid) is None:
             cls.chat_history[uid] = [{
                "role": "system", 
-               "content": (
-                   "对话者发送的消息格式如下：'［名字］〘时间〙: 内容'。\n"
-                   "注意：长名字会被截断。"
-                   + ChatConfig.get("SOUL")
-               )
+               "content": 
+                  ChatConfig.get("SOUL")
            }]
         cls.chat_history[uid].append({"role": role, "content": words})
         await cls.check_token(uid, len(words))
