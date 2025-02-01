@@ -21,7 +21,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="0.1",
+        version="0.2",
         menu_type="群内小游戏",
         configs=[
             RegisterConfig(
