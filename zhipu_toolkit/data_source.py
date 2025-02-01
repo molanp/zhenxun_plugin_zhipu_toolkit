@@ -77,7 +77,7 @@ class ChatManager:
     @classmethod
     async def send_message(cls, event: Event) -> str:
         uid = str(event.sender.user_id)
-        user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)[:10]
+        user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)
         words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}，你要称呼我为'{user_name}'。 {event.get_plaintext()}"
         if len(words) > 4095:
             return "超出最大token限制: 4095"
