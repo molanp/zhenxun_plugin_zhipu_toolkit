@@ -9,13 +9,24 @@ from nonebot.adapters.onebot.v11 import Event, Message, MessageSegment
 from nonebot.rule import to_me
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 
-from .config import ChatConfig
+from .config import ChatConfig, nicknames
 from .data_source import (
     ChatManager,
     check_task_status_periodically,
     submit_task_to_zhipuai,
     hello,
 )
+
+async def is_to_me(bot, event: Event, state) -> bool:
+    msg = event.get_plaintext()
+    # 检查消息中是否包含昵称
+    for nickname in nicknames:
+        if nickname in msg:
+            return True
+    # 检查是否为 @ 机器人
+    if await to_me().__call__(bot, event, state):
+        return True
+    return False
 
 draw_pic = on_alconna(
     Alconna("生成图片", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
@@ -29,7 +40,7 @@ draw_video = on_alconna(
     block=True,
 )
 
-chat = on_message(rule=to_me(), priority=999, block=True)
+chat = on_message(rule=is_to_me, priority=999, block=True)
 
 clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 

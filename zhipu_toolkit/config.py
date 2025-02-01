@@ -1,3 +1,8 @@
+import nonebot
+from pydantic import BaseModel, Extra
+from pathlib import Path
+from typing import Set
+
 from zhenxun.configs.config import Config
 
 class ChatConfig:
@@ -13,3 +18,11 @@ class ChatConfig:
          key,
          cls.default.get(key)
       )
+
+
+class PluginConfig(BaseModel, extra=Extra.ignore):
+    nickname: Set[str] = ["Bot", "bot"]
+
+plugin_config: PluginConfig = PluginConfig.parse_obj(nonebot.get_driver().config.dict(exclude_unset=True))
+
+nicknames = plugin_config.nickname
