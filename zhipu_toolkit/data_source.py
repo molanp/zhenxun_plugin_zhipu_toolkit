@@ -13,7 +13,7 @@ from .config import ChatConfig
 async def submit_task_to_zhipuai(message: str):
     client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
     return client.videos.generations(
-        model="cogvideox-flash",
+        model=ChatConfig.get("VIDEO_MODEL"),
         prompt=message,
         with_audio=True,
     )
@@ -46,8 +46,9 @@ async def check_task_status_periodically(task_id: str, action):
                 await action.send(Video(url=response.video_result[0].url))
                 break
             elif response.task_status == "FAIL":
-                await action.send(Text("生成失败了.."), reply_to=True)
-            await asyncio.sleep(5)
+                await action.send(Text("生成失败了.: ."), reply_to=True)
+                break
+            await asyncio.sleep(2)
 
 
 async def check_task_status_from_zhipuai(task_id: str):
@@ -78,7 +79,7 @@ class ChatManager:
     async def send_message(cls, event: Event) -> str:
         uid = str(event.sender.user_id)
         user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)
-        words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}，你要称呼我为'{user_name}'。 {event.get_plaintext()}"
+        words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}, 我是'{user_name}'。 {event.get_plaintext()}"
         if len(words) > 4095:
             return "超出最大token限制: 4095"
         await cls.add_message(words, uid)
@@ -88,7 +89,7 @@ class ChatManager:
             response = await loop.run_in_executor(
                 None,
                 lambda: client.chat.completions.create(
-                    model="glm-4-flash",
+                    model=ChatConfig.get("CHAT_MODEL"),
                     messages=cls.chat_history[uid],
                     user_id=uid
                 ),

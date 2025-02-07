@@ -100,7 +100,9 @@ async def handle_check(msg: str):
             response = await loop.run_in_executor(
                 None,
                 lambda: client.images.generations(
-                    model="cogview-3-flash", prompt=msg, size="1440x720"
+                    model=ChatConfig.get("PIC_MODEL"),
+                    prompt=msg,
+                    size="1440x720"
                 ),
             )
             await draw_pic.send(Image(url=response.data[0].url), reply_to=True)

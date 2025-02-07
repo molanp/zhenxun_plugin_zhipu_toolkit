@@ -8,6 +8,9 @@ from zhenxun.configs.config import Config
 class ChatConfig:
    default = {
       "API_KEY": "",
+      "CHAT_MODEL": "glm-4-flash",
+      "PIC_MODEL": "cogview-3-flash",
+      "VIDEO_MODEL": "cogvideox-flash",
       "SOUL": "你是真寻，你强大且无所不能"
    }
    @classmethod

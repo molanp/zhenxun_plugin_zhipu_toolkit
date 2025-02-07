@@ -31,6 +31,24 @@ __plugin_meta__ = PluginMetadata(
                 default_value="",
             ),
             RegisterConfig(
+                key="CHAT_MODEL",
+                value="glm-4-flash",
+                help="所使用的对话模型代码",
+                default_value="glm-4-flash",
+            ),
+            RegisterConfig(
+                key="PIC_MODEL",
+                value="cogview-3-flash",
+                help="所使用的图片生成模型代码",
+                default_value="cogview-3-flash",
+            ),
+            RegisterConfig(
+                key="VIDEO_MODEL",
+                value="cogvideox-flash",
+                help="所使用的视频生成模型代码",
+                default_value="cogvideox-flash",
+            ),
+            RegisterConfig(
                 key="SOUL",
                 value="你是真寻，你强大且无所不能",
                 help="AI的自定义人格",
