@@ -1,9 +1,9 @@
+import nonebot
 from nonebot.plugin import PluginMetadata
-
+from pathlib import Path
 from zhenxun.configs.config import BotConfig
 from zhenxun.configs.utils import PluginExtraData, RegisterConfig
 
-from .handler import chat, draw_pic, draw_video  # noqa: F401
 
 __plugin_meta__ = PluginMetadata(
     name="AI全家桶",
@@ -57,3 +57,5 @@ __plugin_meta__ = PluginMetadata(
         ],
     ).dict(),
 )
+
+nonebot.load_plugins(str(Path(__file__).parent.resolve()))

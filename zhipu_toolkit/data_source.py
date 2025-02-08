@@ -79,7 +79,7 @@ class ChatManager:
     async def send_message(cls, event: Event) -> str:
         uid = str(event.sender.user_id)
         user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)
-        words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}, 我叫'{user_name}'。 {event.get_plaintext()}"
+        words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}, 我叫'{user_name}'。我想说: {event.get_plaintext()}"
         if len(words) > 4095:
             return "超出最大token限制: 4095"
         await cls.add_message(words, uid)
@@ -112,9 +112,13 @@ class ChatManager:
         await cls.check_token(uid, len(words))
 
     @classmethod
-    async def clear_history(cls, uid: str):
-        if cls.chat_history.get(uid) is None:
-            return 0
-        count = len(cls.chat_history[uid])
-        del cls.chat_history[uid]
+    async def clear_history(cls, uid: str | None = None):
+        if uid is None:
+           count = len(cls.chat_history)
+           cls.chat_history = {}
+        elif cls.chat_history.get(uid) is None:
+           count = 0
+        else:
+           count = len(cls.chat_history[uid])
+           del cls.chat_history[uid]
         return count

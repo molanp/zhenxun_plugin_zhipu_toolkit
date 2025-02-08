@@ -7,6 +7,7 @@ from zhipuai import ZhipuAI
 require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import Event, Message, MessageSegment
 from nonebot.rule import to_me
+from nonebot.permission import SUPERUSER
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 
 from .config import ChatConfig, nicknames
@@ -29,21 +30,38 @@ async def is_to_me(bot, event: Event, state) -> bool:
     return False
 
 draw_pic = on_alconna(
-    Alconna("生成图片", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
+    Alconna(
+       "生成图片",
+       Args["msg?", AllParam],
+       meta=CommandMeta(compact=True)
+    ),
     priority=5,
     block=True,
 )
 
 draw_video = on_alconna(
-    Alconna("生成视频", Args["message?", AllParam], meta=CommandMeta(compact=True)),
+    Alconna(
+       "生成视频",
+       Args["message?", AllParam], meta=CommandMeta(compact=True)
+    ),
     priority=5,
     block=True,
 )
 
 chat = on_message(rule=is_to_me, priority=999, block=True)
 
-clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
+clear_my_chat = on_alconna(
+   Alconna("清理我的会话"),
+   priority=5,
+   block=True
+)
 
+clear_all_chat = on_alconna(
+   Alconna("清理全部会话"),
+   permission=SUPERUSER,
+   priority=5,
+   block=True
+)
 
 @draw_pic.handle()
 async def _(msg: Match[str]):
@@ -88,6 +106,12 @@ async def _(event: Event):
         reply_to=True,
     )
 
+@clear_all_chat.handle()
+async def _():
+   await clear_my_chat.send(
+        Text(f"已清理 {await ChatManager.clear_history()} 条用户数据"),
+        reply_to=True,
+    ) 
 
 @draw_pic.got_path("msg", prompt="你要画什么呢")
 async def handle_check(msg: str):
