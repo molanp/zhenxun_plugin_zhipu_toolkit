@@ -1,23 +1,24 @@
 import asyncio
 
-from arclet.alconna import Alconna, Args, CommandMeta, AllParam
+from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import on_message, require
 from zhipuai import ZhipuAI
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import Event, Message, MessageSegment
 from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
-from nonebot.rule import to_me
 from nonebot.permission import SUPERUSER
+from nonebot.rule import to_me
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 
 from .config import ChatConfig, nicknames
 from .data_source import (
     ChatManager,
     check_task_status_periodically,
-    submit_task_to_zhipuai,
     hello,
+    submit_task_to_zhipuai,
 )
+
 
 async def is_to_me(bot, event: Event, state) -> bool:
     msg = event.get_plaintext()
@@ -26,50 +27,36 @@ async def is_to_me(bot, event: Event, state) -> bool:
         if nickname in msg:
             return True
     # 检查是否为 @ 机器人
-    if await to_me().__call__(bot, event, state):
-        return True
-    return False
+    return bool(await to_me().__call__(bot, event, state))
+
 
 draw_pic = on_alconna(
-    Alconna(
-       "生成图片",
-       Args["msg?", AllParam],
-       meta=CommandMeta(compact=True)
-    ),
+    Alconna("生成图片", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
     priority=5,
     block=True,
 )
 
 draw_video = on_alconna(
-    Alconna(
-       "生成视频",
-       Args["message?", AllParam], meta=CommandMeta(compact=True)
-    ),
+    Alconna("生成视频", Args["message?", AllParam], meta=CommandMeta(compact=True)),
     priority=5,
     block=True,
 )
 
 chat = on_message(rule=is_to_me, priority=999, block=True)
 
-clear_my_chat = on_alconna(
-   Alconna("清理我的会话"),
-   priority=5,
-   block=True
-)
+clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 
 clear_all_chat = on_alconna(
-   Alconna("清理全部会话"),
-   permission=SUPERUSER,
-   priority=5,
-   block=True
+    Alconna("清理全部会话"), permission=SUPERUSER, priority=5, block=True
 )
 
 clear_group_chat = on_alconna(
-   Alconna("清理群会话"),
-   permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
-   priority=5,
-   block=True
+    Alconna("清理群会话"),
+    permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
+    priority=5,
+    block=True,
 )
+
 
 @draw_pic.handle()
 async def _(msg: Match[str]):
@@ -108,11 +95,12 @@ async def _(event: Event):
 
 @clear_my_chat.handle()
 async def _(event: Event):
-    uid = str(event.sender.user_id)
+    uid = str(event.sender.user_id)  # type: ignore
     await clear_my_chat.send(
         Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"),
         reply_to=True,
     )
+
 
 @clear_all_chat.handle()
 async def _():
@@ -121,17 +109,17 @@ async def _():
         reply_to=True,
     )
 
+
 @clear_group_chat.handle()
 async def _(event: Event):
     if not hasattr(event, "group_id"):
-        await clear_group_chat.send(
-           Text("该命令仅限群聊内使用!")
-           )
+        await clear_group_chat.send(Text("该命令仅限群聊内使用!"))
         return
     await clear_my_chat.send(
-        Text(f"已清理 {await ChatManager.clear_history(event.group_id)} 条用户数据"),
+        Text(f"已清理 {await ChatManager.clear_history(event.group_id)} 条用户数据"), # type: ignore
         reply_to=True,
-    ) 
+    )
+
 
 @draw_pic.got_path("msg", prompt="你要画什么呢")
 async def handle_check(msg: str):
@@ -144,9 +132,7 @@ async def handle_check(msg: str):
             response = await loop.run_in_executor(
                 None,
                 lambda: client.images.generations(
-                    model=ChatConfig.get("PIC_MODEL"),
-                    prompt=msg,
-                    size="1440x720"
+                    model=ChatConfig.get("PIC_MODEL"), prompt=msg, size="1440x720"
                 ),
             )
             await draw_pic.send(Image(url=response.data[0].url), reply_to=True)

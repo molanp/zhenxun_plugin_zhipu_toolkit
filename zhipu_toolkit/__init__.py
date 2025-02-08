@@ -1,9 +1,10 @@
+from pathlib import Path
+
 import nonebot
 from nonebot.plugin import PluginMetadata
-from pathlib import Path
+
 from zhenxun.configs.config import BotConfig
 from zhenxun.configs.utils import PluginExtraData, RegisterConfig
-
 
 __plugin_meta__ = PluginMetadata(
     name="AI全家桶",
@@ -55,6 +56,12 @@ __plugin_meta__ = PluginMetadata(
                 default_value="cogvideox-flash",
             ),
             RegisterConfig(
+                key="IMAGE_UNDERSTANDING_MODEL",
+                value="glm-4v-flash",
+                help="所使用的图像理解模型",
+                default_value="glm-4v-flash",
+            ),
+            RegisterConfig(
                 key="SOUL",
                 value="你是真寻，你强大且无所不能",
                 help="AI的自定义人格",
@@ -65,7 +72,7 @@ __plugin_meta__ = PluginMetadata(
                 value="user",
                 help="对话分组模式，支持'user','group','all'",
                 default_value="user",
-            ), 
+            ),
         ],
     ).dict(),
 )
