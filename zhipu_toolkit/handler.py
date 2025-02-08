@@ -6,6 +6,7 @@ from zhipuai import ZhipuAI
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import Event, Message, MessageSegment
+from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
 from nonebot.rule import to_me
 from nonebot.permission import SUPERUSER
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
@@ -63,6 +64,13 @@ clear_all_chat = on_alconna(
    block=True
 )
 
+clear_group_chat = on_alconna(
+   Alconna("清理群会话"),
+   permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
+   priority=5,
+   block=True
+)
+
 @draw_pic.handle()
 async def _(msg: Match[str]):
     if msg.available:
@@ -108,8 +116,20 @@ async def _(event: Event):
 
 @clear_all_chat.handle()
 async def _():
-   await clear_my_chat.send(
+    await clear_all_chat.send(
         Text(f"已清理 {await ChatManager.clear_history()} 条用户数据"),
+        reply_to=True,
+    )
+
+@clear_group_chat.handle()
+async def _(event: Event):
+    if not hasattr(event, "group_id"):
+        await clear_group_chat.send(
+           Text("该命令仅限群聊内使用!")
+           )
+        return
+    await clear_my_chat.send(
+        Text(f"已清理 {await ChatManager.clear_history(event.group_id)} 条用户数据"),
         reply_to=True,
     ) 
 

@@ -77,8 +77,14 @@ class ChatManager:
 
     @classmethod
     async def send_message(cls, event: Event) -> str:
-        uid = str(event.sender.user_id)
-        user_name = (event.sender.card if hasattr(event.sender, 'card') and event.sender.card else event.sender.nickname)
+        match(ChatConfig.get("CHAT_MODE")):
+           case "user":
+              uid = str(event.sender.user_id)
+           case "group":
+              uid = str(event.group_id) if hasattr(event, "group_id") else str(event.sender.user_id)
+           case "all":
+              uid = "mix_mode"
+        user_name = (event.sender.card if hasattr(event.sender, "card") and event.sender.card else event.sender.nickname)
         words = f"现在是{datetime.datetime.fromtimestamp(event.time).strftime('%Y-%m-%d %H:%M:%S')}, 我叫'{user_name}'。我想说: {event.get_plaintext()}"
         if len(words) > 4095:
             return "超出最大token限制: 4095"

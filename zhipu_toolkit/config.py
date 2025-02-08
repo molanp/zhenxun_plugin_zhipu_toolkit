@@ -11,7 +11,8 @@ class ChatConfig:
       "CHAT_MODEL": "glm-4-flash",
       "PIC_MODEL": "cogview-3-flash",
       "VIDEO_MODEL": "cogvideox-flash",
-      "SOUL": "你是真寻，你强大且无所不能"
+      "SOUL": "你是真寻，你强大且无所不能",
+      "CHAT_MODE": "user"
    }
    @classmethod
    def get(cls, key: str):
