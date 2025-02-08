@@ -50,6 +50,8 @@
 | `CHAT_MODEL` | **否** | `glm-4-flash`| 所使用的对话模型代码 |
 | `PIC_MODEL` | **否** | `cogview-3-flash` | 所使用的图片生成模型代码 |
 | `VIDEO_MODEL` | **否** | `cogvideox-flash` | 所使用的视频生成模型代码|
+| `IMAGE_UNDERSTANDING_MODEL` | **否** | `glm-4v-flash` | 所使用的图片理解模型代码 |
+| `CHAT_MODE` | **否** | `user` | 对话分组模式，支持'user','group','all' |
 | `SOUL` | **否** | `你是真寻，你强大且无所不能` | AI的自定义人格 |
 
 ## 📚 插件依赖
