@@ -162,7 +162,8 @@ class ChatManager:
     async def __generate_image_description(cls, url):
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-        response = await loop.run_in_executor(
+        try:
+           response = await loop.run_in_executor(
             None,
             lambda: client.chat.completions.create(
                 model=ChatConfig.get("IMAGE_UNDERSTANDING_MODEL"),
@@ -181,6 +182,8 @@ class ChatManager:
                 user_id=str(uuid.uuid4()),
             ),
         )
-        result = response.choices[0].message.content  # type: ignore
+           result = response.choices[0].message.content  # type: ignore
+        except Exception as e:
+           result = str(e)
         assert isinstance(result, str)
         return result
