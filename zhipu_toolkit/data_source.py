@@ -201,7 +201,7 @@ class ChatManager:
         content = "".join(
             f"{msg.nickname} ({msg.uid})说:\n{msg.msg}\n\n" for msg in group_msg
         )
-        head = f"你在一个QQ群里，群号是{gid},当前和你说话的人昵称是{nickname}, QQ号是{uid}, 请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。如果觉得此时不需要自己说话，只回复<EMPTY>下面是群组的聊天记录：\n\n"  # noqa: E501
+        head = f"你在一个QQ群里，群号是{gid},当前和你说话的人昵称是'{nickname}'', QQ号是{uid}, 请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不要附加任何奇怪的东西，如聊天记录的格式。如果觉得此时不需要自己说话，只回复<EMPTY>下面是群组的聊天记录：\n\n"  # noqa: E501
         foot = "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式，禁止重复聊天记录。不允许有无意义的语气词和emoji。"  # noqa: E501
         result = await cls.get_zhipu_result(
             str(uuid.uuid4()),
