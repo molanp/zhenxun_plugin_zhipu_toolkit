@@ -1,6 +1,11 @@
-from pathlib import Path
-
-import nonebot
+from .handler import (
+    draw_pic,
+    draw_video,
+    chat,
+    clear_my_chat,
+    clear_all_chat,
+    clear_group_chat
+)
 from nonebot.plugin import PluginMetadata
 
 from zhenxun.configs.config import BotConfig
@@ -76,5 +81,3 @@ __plugin_meta__ = PluginMetadata(
         ],
     ).dict(),
 )
-
-nonebot.load_plugins(str(Path(__file__).parent.resolve()))
