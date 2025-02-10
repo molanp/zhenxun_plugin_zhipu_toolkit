@@ -1,15 +1,17 @@
-from .handler import (
-    draw_pic,
-    draw_video,
-    chat,
-    clear_my_chat,
-    clear_all_chat,
-    clear_group_chat
-)
 from nonebot.plugin import PluginMetadata
 
 from zhenxun.configs.config import BotConfig
 from zhenxun.configs.utils import PluginExtraData, RegisterConfig
+
+from .handler import (
+    byd_chat,  # noqa: F401
+    clear_all_chat,  # noqa: F401
+    clear_group_chat,  # noqa: F401
+    clear_my_chat,  # noqa: F401
+    draw_pic,  # noqa: F401
+    draw_video,  # noqa: F401
+    normal_chat,  # noqa: F401
+)
 
 __plugin_meta__ = PluginMetadata(
     name="AI全家桶",
@@ -28,7 +30,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="0.4",
+        version="0.5",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -78,6 +80,23 @@ __plugin_meta__ = PluginMetadata(
                 help="对话分组模式，支持'user','group','all'",
                 default_value="user",
             ),
+            RegisterConfig(
+                key="IMPERSONATION_MODE",
+                value=False,
+                help="是否启用伪人模式",
+                default_value=False,
+            ),
+            RegisterConfig(
+                key="IMPERSONATION_TRIGGER_FREQUENCY",
+                value=20,
+                help="伪人模式触发频率[0-100]",
+                default_value=20,
+            ),
+            RegisterConfig(
+                key="IMPERSONATION_MODEL",
+                value="glm-4-flash",
+                help="伪人模式对话模型,由于对话量大，建议使用免费模型",
+                default_value="glm-4-flash",            )
         ],
     ).dict(),
 )

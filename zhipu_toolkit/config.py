@@ -15,6 +15,9 @@ class ChatConfig:
         "IMAGE_UNDERSTANDING_MODEL": "glm-4v-flash",
         "SOUL": "你是真寻，你强大且无所不能",
         "CHAT_MODE": "user",
+        "IMPERSONATION_MODE": False,
+        "IMPERSONATION_TRIGGER_FREQUENCY": 20,
+        "IMPERSONATION_MODEL": "glm-4-flash"
     }
 
     @classmethod

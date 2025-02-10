@@ -5,14 +5,41 @@ import random
 from typing import ClassVar
 import uuid
 
-from nonebot.adapters.onebot.v11 import Event, MessageSegment
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, MessageEvent, MessageSegment
 from nonebot_plugin_alconna import Text, Video
+from pydantic import BaseModel
 from zhipuai import ZhipuAI
 
 from zhenxun.configs.config import BotConfig
 from zhenxun.configs.path_config import IMAGE_PATH
 
 from .config import ChatConfig
+
+
+class GroupMessageModel(BaseModel):
+    uid: str
+    nickname: str
+    msg: str
+
+
+GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
+
+
+async def cache_group_message(event: GroupMessageEvent):
+    msg = GroupMessageModel(
+        uid=str(event.sender.user_id),
+        nickname=await ChatManager.get_user_nickname(event),
+        msg=await ChatManager.get_message(event),
+    )
+
+    gid = str(event.group_id)
+    if gid in GROUP_MSG_CACHE:
+        if len(GROUP_MSG_CACHE[gid]) >= 20:
+            GROUP_MSG_CACHE[gid].pop(0)
+
+        GROUP_MSG_CACHE[gid].append(msg)
+    else:
+        GROUP_MSG_CACHE[gid] = [msg]
 
 
 async def submit_task_to_zhipuai(message: str):
@@ -39,7 +66,7 @@ async def hello() -> list:
     return [result, IMAGE_PATH / "zai" / img]
 
 
-async def check_task_status_periodically(task_id: str, action):
+async def check_task_status_periodically(task_id: str, action) -> None:
     while True:
         try:
             response = await check_task_status_from_zhipuai(task_id)
@@ -64,6 +91,7 @@ async def check_task_status_from_zhipuai(task_id: str):
 class ChatManager:
     chat_history: ClassVar[dict] = {}
     chat_history_token: ClassVar[dict] = {}
+    impersonation_group: ClassVar[dict] = {}
 
     @classmethod
     async def check_token(cls, uid: str, token_len: int):
@@ -81,36 +109,24 @@ class ChatManager:
         # cls.chat_history[uid] = user_history
 
     @classmethod
-    async def send_message(cls, event: Event) -> list[MessageSegment]:
+    async def send_message(cls, event: MessageEvent) -> list[MessageSegment]:
         # sourcery skip: use-fstring-for-formatting
         match ChatConfig.get("CHAT_MODE"):
             case "user":
-                uid = str(event.sender.user_id)  # type: ignore
+                uid = str(event.sender.user_id)
             case "group":
-                uid = (
+                uid = "g-" + (
                     str(event.group_id)  # type: ignore
                     if hasattr(event, "group_id")
-                    else str(event.sender.user_id)  # type: ignore
+                    else str(event.sender.user_id)
                 )
             case "all":
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
-        user_name = (
-            event.sender.card  # type: ignore
-            if hasattr(event.sender, "card") and event.sender.card  # type: ignore
-            else event.sender.nickname  # type: ignore
-        )
-        message = ""
-        for segment in event.get_message():
-            if segment.type == "text":
-                message += segment.data["text"]
-            elif segment.type == "image":
-                message += "[图片,描述:{}]".format(
-                    await cls.__generate_image_description(
-                        segment.data["url"].replace("https://", "http://")
-                    )
-                )
+        user_name = await cls.get_user_nickname(event)
+        await cls.add_system_message(ChatConfig.get("SOUL"), uid)
+        message = await cls.get_message(event)
         if message.strip() == "":
             result = await hello()
             return [MessageSegment.text(result[0]), MessageSegment.image(result[1])]
@@ -122,39 +138,26 @@ class ChatManager:
         if len(words) > 4095:
             return [MessageSegment.text("超出最大token限制: 4095")]
         await cls.add_message(words, uid)
-        loop = asyncio.get_event_loop()
-        client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: client.chat.completions.create(
-                    model=ChatConfig.get("CHAT_MODEL"),
-                    messages=cls.chat_history[uid],
-                    user_id=uid,
-                ),
-            )
-        except Exception as e:
-            return [
-                MessageSegment.text(
-                    f"Error: {e!s}" + "\n\n如需清理对话记录，请发送'清理我的会话'"
-                )
-            ]
-        result = response.choices[0].message.content  # type: ignore
-        assert isinstance(result, str)
+        result = await cls.get_zhipu_result(
+            uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid]
+        )
+        if isinstance(result, list):
+            return result
         await cls.add_message(result, uid, role="assistant")
         return [MessageSegment.text(result)]
 
     @classmethod
-    async def add_message(cls, words: str, uid: str, role="user"):
-        if cls.chat_history.get(uid) is None:
-            cls.chat_history[uid] = [
-                {"role": "system", "content": ChatConfig.get("SOUL")}
-            ]
+    async def add_message(cls, words: str, uid: str, role="user") -> None:
         cls.chat_history[uid].append({"role": role, "content": words})
         await cls.check_token(uid, len(words))
 
     @classmethod
-    async def clear_history(cls, uid: str | None = None):
+    async def add_system_message(cls, soul: str, uid: str) -> None:
+        if cls.chat_history.get(uid) is None:
+            cls.chat_history[uid] = [{"role": "system", "content": soul}]
+
+    @classmethod
+    async def clear_history(cls, uid: str | None = None) -> int:
         if uid is None:
             count = len(cls.chat_history)
             cls.chat_history = {}
@@ -166,7 +169,79 @@ class ChatManager:
         return count
 
     @classmethod
-    async def __generate_image_description(cls, url):
+    async def get_message(cls, event: MessageEvent) -> str:
+        message = ""
+        for segment in event.get_message():
+            if segment.type == "image":
+                message += "\n[图片,描述:{}]".format(
+                    await cls.__generate_image_description(
+                        segment.data["url"].replace("https://", "http://")
+                    )
+                )
+            elif segment.type == "text":
+                message += segment.data["text"]
+        return message
+
+    @classmethod
+    async def get_user_nickname(cls, event: MessageEvent) -> str:
+        if hasattr(event.sender, "card") and event.sender.card:
+            return event.sender.card
+        return event.sender.nickname if event.sender.nickname is not None else "None"
+
+    @classmethod
+    async def impersonation_result(
+        cls, event: GroupMessageEvent
+    ) -> MessageSegment | None:
+        gid = str(event.group_id)
+        nickname = await cls.get_user_nickname(event)
+        uid = str(event.sender.user_id)
+        if not (group_msg := GROUP_MSG_CACHE[gid]):
+            return
+
+        content = "".join(
+            f"{msg.nickname} ({msg.uid})说:\n{msg.msg}\n\n" for msg in group_msg
+        )
+        head = f"你在一个QQ群里，群号是{gid},当前和你说话的人昵称是{nickname}, QQ号是{uid}, 请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。如果觉得此时不需要自己说话，只回复<EMPTY>下面是群组的聊天记录：\n\n"  # noqa: E501
+        foot = "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式，禁止重复聊天记录。不允许有无意义的语气词和emoji。"  # noqa: E501
+        result = await cls.get_zhipu_result(
+            str(uuid.uuid4()),
+            ChatConfig.get("IMPERSONATION_MODEL"),
+            [
+                {
+                    "role": "user",
+                    "content": head + content + foot,
+                }
+            ],
+        )
+        if isinstance(result, list):
+            return
+        if "<EMPTY>" in result:
+            return
+        return MessageSegment.text(result)
+
+    @classmethod
+    async def get_zhipu_result(
+        cls, uid: str, model: str, messages: list
+    ) -> str | list[MessageSegment]:
+        loop = asyncio.get_event_loop()
+        client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
+        try:
+            response = await loop.run_in_executor(
+                None,
+                lambda: client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    user_id=uid,
+                ),
+            )
+        except Exception as e:
+            return [
+                MessageSegment.text(f"{e!s}\n\n如需清理对话记录，请发送'清理我的会话'")
+            ]
+        return response.choices[0].message.content  # type: ignore
+
+    @classmethod
+    async def __generate_image_description(cls, url: str):
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         try:

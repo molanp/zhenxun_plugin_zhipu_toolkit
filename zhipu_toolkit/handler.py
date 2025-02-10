@@ -1,25 +1,32 @@
 import asyncio
+import random
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import on_message, require
 from zhipuai import ZhipuAI
 
 require("nonebot_plugin_alconna")
-from nonebot.adapters.onebot.v11 import Event, Message, MessageSegment
+from nonebot.adapters.onebot.v11 import (
+    GroupMessageEvent,
+    Message,
+    MessageEvent,
+    MessageSegment,
+)
 from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
 from nonebot.permission import SUPERUSER
-from nonebot.rule import to_me
+from nonebot.rule import is_type, to_me
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 
 from .config import ChatConfig, nicknames
 from .data_source import (
     ChatManager,
+    cache_group_message,
     check_task_status_periodically,
     submit_task_to_zhipuai,
 )
 
 
-async def is_to_me(bot, event: Event, state) -> bool:
+async def is_to_me(bot, event: MessageEvent, state) -> bool:
     msg = event.get_plaintext()
     # 检查消息中是否包含昵称
     for nickname in nicknames:
@@ -41,7 +48,9 @@ draw_video = on_alconna(
     block=True,
 )
 
-chat = on_message(rule=is_to_me, priority=999, block=True)
+normal_chat = on_message(rule=is_to_me, priority=998, block=True)
+
+byd_chat = on_message(rule=is_type(GroupMessageEvent), priority=999, block=False)
 
 clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 
@@ -51,6 +60,7 @@ clear_all_chat = on_alconna(
 
 clear_group_chat = on_alconna(
     Alconna("清理群会话"),
+    rule=is_type(GroupMessageEvent),
     permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
     priority=5,
     block=True,
@@ -69,22 +79,33 @@ async def _(message: Match[str]):
         draw_video.set_path_arg("message", str(message.result))
 
 
-@chat.handle()
-async def _(event: Event):
+@normal_chat.handle()
+async def _(event: MessageEvent):
     if ChatConfig.get("API_KEY") == "":
-        await chat.send(
+        await normal_chat.send(
             Message(MessageSegment.text("请先设置智谱AI的APIKEY!")), reply_message=True
         )
     else:
-        await chat.send(
+        await normal_chat.send(
             Message(Message(await ChatManager.send_message(event))),
             reply_message=True,
         )
 
 
+@byd_chat.handle()
+async def _(event: GroupMessageEvent):
+    if ChatConfig.get("API_KEY") == "":
+        return
+    await cache_group_message(event)
+    if random.randint(1, 100) < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
+        result = await ChatManager.impersonation_result(event)
+        if result:
+            await byd_chat.send(Message(result))
+
+
 @clear_my_chat.handle()
-async def _(event: Event):
-    uid = str(event.sender.user_id)  # type: ignore
+async def _(event: MessageEvent):
+    uid = str(event.sender.user_id)
     await clear_my_chat.send(
         Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"),
         reply_to=True,
@@ -100,12 +121,10 @@ async def _():
 
 
 @clear_group_chat.handle()
-async def _(event: Event):
-    if not hasattr(event, "group_id"):
-        await clear_group_chat.send(Text("该命令仅限群聊内使用!"))
-        return
+async def _(event: GroupMessageEvent):
+    count = await ChatManager.clear_history(str(event.group_id))
     await clear_my_chat.send(
-        Text(f"已清理 {await ChatManager.clear_history(event.group_id)} 条用户数据"),  # type: ignore
+        Text(f"已清理 {count} 条用户数据"),
         reply_to=True,
     )
 
@@ -145,7 +164,7 @@ async def submit_task(message: str):
                 )
                 asyncio.create_task(  # noqa: RUF006
                     check_task_status_periodically(response.id, draw_video)  # type: ignore
-                )  # type: ignore
+                )
             else:
                 await draw_video.send(
                     Text(f"任务提交失败，e:{response}"), reply_to=True
