@@ -265,7 +265,7 @@ class ChatManager:
                 ),
             )
             result = response.choices[0].message.content  # type: ignore
-        except Exception as e:
-            result = str(e)
+        except Exception:
+            result = ""
         assert isinstance(result, str)
         return result
