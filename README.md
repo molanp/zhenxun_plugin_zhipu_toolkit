@@ -53,6 +53,9 @@
 | `IMAGE_UNDERSTANDING_MODEL` | **否** | `glm-4v-flash` | 所使用的图片理解模型代码 |
 | `CHAT_MODE` | **否** | `user` | 对话分组模式，支持'user','group','all' |
 | `SOUL` | **否** | `你是真寻，你强大且无所不能` | AI的自定义人格 |
+| `IMPERSONATION_MODE` | **否** | `False` | 是否启用伪人模式 |
+| `IMPERSONATION_TRIGGER_FREQUENCY` | **否** | `20` | 伪人模式触发频率[0-100] |
+| `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
 
 ## 📚 插件依赖
 如果插件报错了没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令
