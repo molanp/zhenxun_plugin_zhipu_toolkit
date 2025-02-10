@@ -15,7 +15,6 @@ from .config import ChatConfig, nicknames
 from .data_source import (
     ChatManager,
     check_task_status_periodically,
-    hello,
     submit_task_to_zhipuai,
 )
 
@@ -77,20 +76,10 @@ async def _(event: Event):
             Message(MessageSegment.text("请先设置智谱AI的APIKEY!")), reply_message=True
         )
     else:
-        message = event.get_plaintext()
-        if message is None or message == "":
-            result = await hello()
-            await chat.send(
-                Message(
-                    [MessageSegment.text(result[0]), MessageSegment.image(result[1])]
-                ),
-                reply_message=True,
-            )
-        else:
-            await chat.send(
-                Message(MessageSegment.text(await ChatManager.send_message(event))),
-                reply_message=True,
-            )
+        await chat.send(
+            Message(Message(await ChatManager.send_message(event))),
+            reply_message=True,
+        )
 
 
 @clear_my_chat.handle()
@@ -116,7 +105,7 @@ async def _(event: Event):
         await clear_group_chat.send(Text("该命令仅限群聊内使用!"))
         return
     await clear_my_chat.send(
-        Text(f"已清理 {await ChatManager.clear_history(event.group_id)} 条用户数据"), # type: ignore
+        Text(f"已清理 {await ChatManager.clear_history(event.group_id)} 条用户数据"),  # type: ignore
         reply_to=True,
     )
 

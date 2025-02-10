@@ -5,7 +5,7 @@ import random
 from typing import ClassVar
 import uuid
 
-from nonebot.adapters.onebot.v11 import Event
+from nonebot.adapters.onebot.v11 import Event, MessageSegment
 from nonebot_plugin_alconna import Text, Video
 from zhipuai import ZhipuAI
 
@@ -81,7 +81,7 @@ class ChatManager:
         # cls.chat_history[uid] = user_history
 
     @classmethod
-    async def send_message(cls, event: Event) -> str:
+    async def send_message(cls, event: Event) -> list[MessageSegment]:
         # sourcery skip: use-fstring-for-formatting
         match ChatConfig.get("CHAT_MODE"):
             case "user":
@@ -111,13 +111,16 @@ class ChatManager:
                         segment.data["url"].replace("https://", "http://")
                     )
                 )
+        if message.strip() == "":
+            result = await hello()
+            return [MessageSegment.text(result[0]), MessageSegment.image(result[1])]
         words = "现在时间是{}，我的名字是'{}'。{}".format(
             datetime.datetime.fromtimestamp(event.time).strftime("%Y-%m-%d %H:%M:%S"),
             user_name,
             message,
         )
         if len(words) > 4095:
-            return "超出最大token限制: 4095"
+            return [MessageSegment.text("超出最大token限制: 4095")]
         await cls.add_message(words, uid)
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -131,11 +134,15 @@ class ChatManager:
                 ),
             )
         except Exception as e:
-            return f"Error: {e!s}" + "\n\n如需清理对话记录，请发送'清理我的会话'"
+            return [
+                MessageSegment.text(
+                    f"Error: {e!s}" + "\n\n如需清理对话记录，请发送'清理我的会话'"
+                )
+            ]
         result = response.choices[0].message.content  # type: ignore
         assert isinstance(result, str)
         await cls.add_message(result, uid, role="assistant")
-        return result
+        return [MessageSegment.text(result)]
 
     @classmethod
     async def add_message(cls, words: str, uid: str, role="user"):
@@ -163,27 +170,27 @@ class ChatManager:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         try:
-           response = await loop.run_in_executor(
-            None,
-            lambda: client.chat.completions.create(
-                model=ChatConfig.get("IMAGE_UNDERSTANDING_MODEL"),
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": "描述图片"},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": url},
-                            },
-                        ],
-                    }
-                ],
-                user_id=str(uuid.uuid4()),
-            ),
-        )
-           result = response.choices[0].message.content  # type: ignore
+            response = await loop.run_in_executor(
+                None,
+                lambda: client.chat.completions.create(
+                    model=ChatConfig.get("IMAGE_UNDERSTANDING_MODEL"),
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "描述图片"},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": url},
+                                },
+                            ],
+                        }
+                    ],
+                    user_id=str(uuid.uuid4()),
+                ),
+            )
+            result = response.choices[0].message.content  # type: ignore
         except Exception as e:
-           result = str(e)
+            result = str(e)
         assert isinstance(result, str)
         return result
