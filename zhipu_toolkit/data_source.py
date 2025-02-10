@@ -111,7 +111,7 @@ class ChatManager:
                         segment.data["url"].replace("https://", "http://")
                     )
                 )
-        words = "现在是{}，我叫'{}'。我想说: {}".format(
+        words = "现在时间是{}，我的名字是'{}'。{}".format(
             datetime.datetime.fromtimestamp(event.time).strftime("%Y-%m-%d %H:%M:%S"),
             user_name,
             message,
