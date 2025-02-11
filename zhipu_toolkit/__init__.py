@@ -104,6 +104,12 @@ __plugin_meta__ = PluginMetadata(
                 help="伪人模式的自定义人格,为False则同步SOUL",
                 default_value=False,
             ),
+            RegisterConfig(
+                key="IMPERSONATION_BAN_GROUP",
+                value=[],
+                help="禁用伪人模式的群组列表",
+                default_value=[],
+            ),
         ],
     ).dict(),
 )

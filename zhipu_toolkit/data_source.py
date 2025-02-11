@@ -35,7 +35,7 @@ GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
 async def cache_group_message(event: GroupMessageEvent, self=None) -> None:
     if self is not None:
         msg = GroupMessageModel(
-            uid=self["uid"],
+            uid=str(self["uid"]),
             nickname=self["nickname"],
             msg=self["msg"],
         )
@@ -342,3 +342,15 @@ class ChatManager:
             result = ""
         assert isinstance(result, str)
         return result
+
+
+class ImpersonationStatus:
+    @classmethod
+    async def check(cls, event: GroupMessageEvent) -> bool:
+        return ChatConfig.get(
+            "IMPERSONATION_MODE"
+        ) is True and event.group_id not in ChatConfig.get("IMPERSONATION_BAN_GROUP")
+
+    @classmethod
+    async def show(cls, event: GroupMessageEvent | MessageEvent, bot: Bot):
+        pass

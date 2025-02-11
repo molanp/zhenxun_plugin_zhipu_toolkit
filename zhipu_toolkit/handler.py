@@ -21,6 +21,7 @@ from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 from .config import ChatConfig, nicknames
 from .data_source import (
     ChatManager,
+    ImpersonationStatus,
     cache_group_message,
     check_task_status_periodically,
     submit_task_to_zhipuai,
@@ -29,11 +30,9 @@ from .data_source import (
 
 async def is_to_me(bot, event: MessageEvent, state) -> bool:
     msg = event.get_plaintext()
-    # 检查消息中是否包含昵称
     for nickname in nicknames:
         if nickname in msg:
             return True
-    # 检查是否为 @ 机器人
     return bool(event.is_tome())
 
 
@@ -95,7 +94,7 @@ async def _(event: MessageEvent):
 
 @byd_chat.handle()
 async def _(event: GroupMessageEvent, bot: Bot):
-    if ChatConfig.get("IMPERSONATION_MODE") is True:
+    if await ImpersonationStatus.check(event):
         if ChatConfig.get("API_KEY") == "":
             return
         await cache_group_message(event)
@@ -125,7 +124,7 @@ async def _():
 @clear_group_chat.handle()
 async def _(event: GroupMessageEvent):
     count = await ChatManager.clear_history(f"g-{event.group_id}")
-    await clear_my_chat.send(
+    await clear_group_chat.send(
         Text(f"已清理 {count} 条用户数据"),
         reply_to=True,
     )

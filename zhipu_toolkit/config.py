@@ -18,7 +18,8 @@ class ChatConfig:
         "IMPERSONATION_MODE": False,
         "IMPERSONATION_TRIGGER_FREQUENCY": 20,
         "IMPERSONATION_MODEL": "glm-4-flash",
-        "IMPERSONATION_SOUL": False
+        "IMPERSONATION_SOUL": False,
+        "IMPERSONATION_BAN_GROUP": []
     }
 
     @classmethod
