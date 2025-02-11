@@ -230,7 +230,7 @@ class ChatManager:
             logger.info(f"GROUP {gid} USER {uid} ---- 伪人触发内容审查", "zhipu_toolkit")
             return
         if "<EMPTY>" in result:
-           logger.info(f"GROUP {gid} USER {uid} ---- 伪人不需要回复，已被跳过", "zhipu_toolkit")
+            logger.info(f"GROUP {gid} USER {uid} ---- 伪人不需要回复，已被跳过", "zhipu_toolkit")
             return
         logger.info(f"GROUP {gid} USER {uid}  ---- 伪人回复: {result}", "zhipu_toolkit")
         return MessageSegment.text(result)
