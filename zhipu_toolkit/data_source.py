@@ -49,7 +49,7 @@ async def parse_at(message: str) -> list[MessageSegment]:
     at_pattern = r'@(\d+)' 
     segments = []
     last_pos = 0
-    if message.endwith("。"):
+    if message.endswith("。"):
         message = message[:-1]
     for match in re.finditer(at_pattern, message):
         if match.start() > last_pos:
