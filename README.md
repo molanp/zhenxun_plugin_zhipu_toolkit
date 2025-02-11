@@ -60,6 +60,7 @@
 | `IMPERSONATION_MODE` | **否** | `False` | 是否启用伪人模式 |
 | `IMPERSONATION_TRIGGER_FREQUENCY` | **否** | `20` | 伪人模式触发频率[0-100] |
 | `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
+| `IMPERSONATION_SOUL` | **否** | `False` | 伪人模式的自定义人格,为False则同步SOUL |
 
 ## 📚 插件依赖
 如果插件报错了没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令

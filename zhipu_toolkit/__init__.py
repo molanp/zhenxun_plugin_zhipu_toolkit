@@ -22,7 +22,7 @@ __plugin_meta__ = PluginMetadata(
         生成图片 <prompt>
         生成视频 <prompt>
         清理我的会话:   用于清理你与AI的聊天记录
-        清理群会话: 用于清理本群会话，仅当分组模式为group时生效
+        清理群会话: (仅管理员)用于清理本群的大杂烩记录，仅当分组模式为group时生效
     或者与机器人聊天，
     例如；
         @Bot抱抱
@@ -96,7 +96,14 @@ __plugin_meta__ = PluginMetadata(
                 key="IMPERSONATION_MODEL",
                 value="glm-4-flash",
                 help="伪人模式对话模型,由于对话量大，建议使用免费模型",
-                default_value="glm-4-flash",            )
+                default_value="glm-4-flash",
+            ),
+            RegisterConfig(
+                key="IMPERSONATION_SOUL",
+                value=False,
+                help="伪人模式的自定义人格,为False则同步SOUL",
+                default_value=False,
+            ),
         ],
     ).dict(),
 )

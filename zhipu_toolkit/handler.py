@@ -7,6 +7,7 @@ from zhipuai import ZhipuAI
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import (
+    Bot,
     GroupMessageEvent,
     Message,
     MessageEvent,
@@ -14,7 +15,7 @@ from nonebot.adapters.onebot.v11 import (
 )
 from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
 from nonebot.permission import SUPERUSER
-from nonebot.rule import is_type, to_me
+from nonebot.rule import is_type
 from nonebot_plugin_alconna import Image, Match, Text, on_alconna
 
 from .config import ChatConfig, nicknames
@@ -93,14 +94,15 @@ async def _(event: MessageEvent):
 
 
 @byd_chat.handle()
-async def _(event: GroupMessageEvent):
-    if ChatConfig.get("API_KEY") == "":
-        return
-    await cache_group_message(event)
-    if random.randint(1, 100) < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
-        result = await ChatManager.impersonation_result(event)
-        if result:
-            await byd_chat.send(Message(result))
+async def _(event: GroupMessageEvent, bot: Bot):
+    if ChatConfig.get("IMPERSONATION_MODE") is True:
+        if ChatConfig.get("API_KEY") == "":
+            return
+        await cache_group_message(event)
+        if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
+            result = await ChatManager.impersonation_result(event, bot)
+            if result:
+                await byd_chat.send(Message(result))
 
 
 @clear_my_chat.handle()
@@ -122,7 +124,7 @@ async def _():
 
 @clear_group_chat.handle()
 async def _(event: GroupMessageEvent):
-    count = await ChatManager.clear_history(str(event.group_id))
+    count = await ChatManager.clear_history(f"g-{event.group_id}")
     await clear_my_chat.send(
         Text(f"已清理 {count} 条用户数据"),
         reply_to=True,
