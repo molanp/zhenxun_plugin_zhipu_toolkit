@@ -16,7 +16,7 @@ from nonebot_plugin_alconna import Text, Video
 from pydantic import BaseModel
 from zhipuai import ZhipuAI
 
-from zhenxun.configs.config import BotConfig
+from zhenxun.configs.config import BotConfig, Config
 from zhenxun.configs.path_config import IMAGE_PATH
 from zhenxun.services.log import logger
 
@@ -156,7 +156,7 @@ class ChatManager:
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
-        user_name = await cls.get_user_nickname(event)
+        nickname = await cls.get_user_nickname(event)
         await cls.add_system_message(ChatConfig.get("SOUL"), uid)
         message = await cls.get_message(event)
         if message.strip() == "":
@@ -164,12 +164,12 @@ class ChatManager:
             return [MessageSegment.text(result[0]), MessageSegment.image(result[1])]
         words = "现在时间是{}，我的名字是'{}'。{}".format(
             datetime.datetime.fromtimestamp(event.time).strftime("%Y-%m-%d %H:%M:%S"),
-            user_name,
+            nickname,
             message,
         )
         if len(words) > 4095:
             logger.warning(
-                f"USER {uid} 问题: {words} ---- 超出最大token限制: 4095",
+                f"USER {uid} NICKNAME {nickname} 问题: {words} ---- 超出最大token限制: 4095",
                 "zhipu_toolkit",
             )
             return [MessageSegment.text("超出最大token限制: 4095")]
@@ -178,10 +178,16 @@ class ChatManager:
             uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid]
         )
         if isinstance(result, list):
-            logger.info(f"USER {uid} 问题: {words} ---- 触发内容审查", "zhipu_toolkit")
+            logger.info(
+                f"USER {uid} NICKNAME {nickname} 问题: {words} ---- 触发内容审查",
+                "zhipu_toolkit",
+            )
             return result
         await cls.add_message(result, uid, role="assistant")
-        logger.info(f"USER {uid} 问题：{words} ---- 回答：{result}", "zhipu_toolkit")
+        logger.info(
+            f"USER {uid} NICKNAME {nickname} 问题：{words} ---- 回答：{result}",
+            "zhipu_toolkit",
+        )
         return await parse_at(result)
 
     @classmethod
@@ -267,18 +273,23 @@ class ChatManager:
             ],
         )
         if isinstance(result, list):
-            logger.info(
-                f"GROUP {gid} USER {uid} ---- 伪人触发内容审查", "zhipu_toolkit"
+            logger.warning(
+                f"GROUP {gid} USER {uid} NICKNAME {nickname} ---- 伪人触发内容审查:\n{content}",
+                "zhipu_toolkit",
             )
             return
         if ":" in result:
             result = result.split(":")[-1].strip("\n")
         if "<EMPTY>" in result:
             logger.info(
-                f"GROUP {gid} USER {uid} ---- 伪人不需要回复，已被跳过", "zhipu_toolkit"
+                f"GROUP {gid} USER {uid} NICKNAME {nickname} ---- 伪人不需要回复，已被跳过",
+                "zhipu_toolkit",
             )
             return
-        logger.info(f"GROUP {gid} USER {uid}  ---- 伪人回复: {result}", "zhipu_toolkit")
+        logger.info(
+            f"GROUP {gid} USER {uid} NICKNAME {nickname}  ---- 伪人回复: {result}",
+            "zhipu_toolkit",
+        )
         my_info = await bot.get_group_member_info(
             group_id=int(gid), user_id=event.self_id
         )
@@ -352,5 +363,31 @@ class ImpersonationStatus:
         ) is True and event.group_id not in ChatConfig.get("IMPERSONATION_BAN_GROUP")
 
     @classmethod
-    async def show(cls, event: GroupMessageEvent | MessageEvent, bot: Bot):
-        pass
+    async def get(cls) -> list[int]:
+        return ChatConfig.get("IMPERSONATION_BAN_GROUP")
+
+    @classmethod
+    async def ban(cls, group_id: int) -> bool:
+        origin = await cls.get()
+        if group_id in origin:
+            return False
+        origin.append(group_id)
+        Config.set_config("zhipu_toolkit", "IMPERSONATION_BAN_GROUP", origin, True)
+        return True
+
+    @classmethod
+    async def unban(cls, group_id: int) -> bool:
+        origin = await cls.get()
+        if group_id not in origin:
+            return False
+        origin.remove(group_id)
+        Config.set_config("zhipu_toolkit", "IMPERSONATION_BAN_GROUP", origin, True)
+        return True
+
+    @classmethod
+    async def action(cls, action: str, group_id: int) -> bool:
+        if action == "禁用":
+            return await cls.ban(group_id)
+        elif action == "启用":
+            return await cls.unban(group_id)
+        return False

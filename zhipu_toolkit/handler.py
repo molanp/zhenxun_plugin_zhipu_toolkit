@@ -1,9 +1,12 @@
 import asyncio
 import random
+import re
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
-from nonebot import on_message, require
+from nonebot import on_message, on_regex, require
 from zhipuai import ZhipuAI
+
+from zhenxun.services.log import logger
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import (
@@ -48,6 +51,13 @@ draw_video = on_alconna(
     block=True,
 )
 
+byd_mode = on_regex(
+    r"(启用|禁用)伪人模式\s*(?:/\d+)?",
+    priority=5,
+    permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
+    block=True,
+)
+
 normal_chat = on_message(rule=is_to_me, priority=998, block=True)
 
 byd_chat = on_message(rule=is_type(GroupMessageEvent), priority=999, block=False)
@@ -79,6 +89,46 @@ async def _(message: Match[str]):
         draw_video.set_path_arg("message", str(message.result))
 
 
+@byd_mode.handle()
+async def _(bot: Bot, event: MessageEvent):
+    command = event.get_plaintext()
+    if match := re.match(r"(启用|禁用)伪人模式(?:\s*(\d+))?", command):
+        action = match[1]
+        if group_id := match[2]:
+            if not await SUPERUSER(bot, event):
+                return
+
+            if await ImpersonationStatus.action(action, int(group_id)):
+                await byd_mode.send(
+                    MessageSegment.text(f"群聊 {group_id} 已 {action} 伪人模式"),
+                    reply_message=True,
+                )
+                logger.info(
+                    f"SUPERUSER {event.user_id} GROUP {group_id} 已{action}伪人模式",
+                    "zhipu_toolkit",
+                )
+            else:
+                await byd_mode.send(
+                    MessageSegment.text(f"群聊 {group_id} 伪人模式不可重复{action}"),
+                    reply_message=True,
+                )
+        elif isinstance(event, GroupMessageEvent):
+            if await ImpersonationStatus.action(action, event.group_id):
+                await byd_mode.send(
+                    MessageSegment.text(f"当前群聊已 {action} 伪人模式"),
+                    reply_message=True,
+                )
+                logger.info(
+                    f"Admin {event.user_id} GROUP {event.group_id} 已{action}伪人模式",
+                    "zhipu_toolkit",
+                )
+            else:
+                await byd_mode.send(
+                    MessageSegment.text(f"当前群聊伪人模式不可重复{action}"),
+                    reply_message=True,
+                )
+
+
 @normal_chat.handle()
 async def _(event: MessageEvent):
     if ChatConfig.get("API_KEY") == "":
@@ -102,6 +152,8 @@ async def _(event: GroupMessageEvent, bot: Bot):
             result = await ChatManager.impersonation_result(event, bot)
             if result:
                 await byd_chat.send(Message(result))
+    else:
+        logger.debug(f"GROUP {event.group_id} 伪人模式被禁用.skip...")
 
 
 @clear_my_chat.handle()
