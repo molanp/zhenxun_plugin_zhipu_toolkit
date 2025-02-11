@@ -229,6 +229,8 @@ class ChatManager:
         if isinstance(result, list):
             logger.info(f"GROUP {gid} USER {uid} ---- 伪人触发内容审查", "zhipu_toolkit")
             return
+        if ":" in result:
+            result = result.split(":")[-1]
         if "<EMPTY>" in result:
             logger.info(f"GROUP {gid} USER {uid} ---- 伪人不需要回复，已被跳过", "zhipu_toolkit")
             return
