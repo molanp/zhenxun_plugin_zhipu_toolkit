@@ -34,7 +34,7 @@ async def cache_group_message(event: GroupMessageEvent):
     )
 
     gid = str(event.group_id)
-    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {msg[:100]}", "zhipu_toolkit")
+    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {str(msg)[:100]}", "zhipu_toolkit")
     if gid in GROUP_MSG_CACHE:
         if len(GROUP_MSG_CACHE[gid]) >= 20:
             GROUP_MSG_CACHE[gid].pop(0)
