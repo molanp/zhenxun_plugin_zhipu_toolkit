@@ -274,7 +274,7 @@ class ChatManager:
         )
         if isinstance(result, list):
             logger.warning(
-                f"GROUP {gid} USER {uid} NICKNAME {nickname} ---- 伪人触发内容审查:\n{content}",
+                f"GROUP {gid} USER {uid} NICKNAME {nickname} ---- 伪人触发内容审查",
                 "zhipu_toolkit",
             )
             return
