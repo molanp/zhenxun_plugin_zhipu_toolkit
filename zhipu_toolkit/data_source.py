@@ -202,7 +202,7 @@ class ChatManager:
             elif segment.type == "text":
                 message += segment.data["text"]
             elif segment.type == "at":
-                message += f"@{segment.data['qq']}"
+                message += f"@{segment.data['qq']} "
             elif segment.type == "share":
                 message += f"[分享内容,标题:{segment.data['title']}]"
         return message
