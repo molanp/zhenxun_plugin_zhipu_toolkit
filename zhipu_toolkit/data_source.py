@@ -319,6 +319,7 @@ class ChatManager:
                 ),
             )
         except Exception as e:
+            logger.warning(f"触发内容审查: {e!s}", "zhipu_toolkit")
             return [
                 MessageSegment.text(f"{e!s}\n\n如需清理对话记录，请发送'清理我的会话'")
             ]
