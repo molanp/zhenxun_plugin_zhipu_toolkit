@@ -33,7 +33,7 @@ async def is_to_me(bot, event: MessageEvent, state) -> bool:
         if nickname in msg:
             return True
     # 检查是否为 @ 机器人
-    return bool(await to_me().__call__(bot, event, state))
+    return bool(event.is_tome())
 
 
 draw_pic = on_alconna(

@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import os
+import re
 import random
 from typing import ClassVar
 import uuid
@@ -44,6 +45,19 @@ async def cache_group_message(event: GroupMessageEvent):
     else:
         GROUP_MSG_CACHE[gid] = [msg]
 
+async def parse_at(message: str) -> list[MessageSegment]:
+    at_pattern = r'@(\d+)' 
+    segments = []
+    last_pos = 0
+    for match in re.finditer(at_pattern, message):
+        if match.start() > last_pos:
+           segments.append(MessageSegment.text(message[last_pos:match.start()]))
+        uid = match.group(1)
+        segments.append(MessageSegment.at(uid))
+        last_pos = match.end()
+    if last_pos < len(message):
+        segments.append(MessageSegment.text(message[last_pos:]))
+    return segments
 
 async def submit_task_to_zhipuai(message: str):
     client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -149,7 +163,7 @@ class ChatManager:
             return result
         await cls.add_message(result, uid, role="assistant")
         logger.info(f"USER {uid} 问题：{words} ---- 回答：{result}", "zhipu_toolkit")
-        return [MessageSegment.text(result)]
+        return await parse_at(result)
 
     @classmethod
     async def add_message(cls, words: str, uid: str, role="user") -> None:
@@ -200,7 +214,7 @@ class ChatManager:
     @classmethod
     async def impersonation_result(
         cls, event: GroupMessageEvent
-    ) -> MessageSegment | None:
+    ) -> list[MessageSegment] | None:
         gid = str(event.group_id)
         nickname = await cls.get_user_nickname(event)
         uid = str(event.sender.user_id)
@@ -235,7 +249,7 @@ class ChatManager:
             logger.info(f"GROUP {gid} USER {uid} ---- 伪人不需要回复，已被跳过", "zhipu_toolkit")
             return
         logger.info(f"GROUP {gid} USER {uid}  ---- 伪人回复: {result}", "zhipu_toolkit")
-        return MessageSegment.text(result)
+        return await parse_at(result)
 
     @classmethod
     async def get_zhipu_result(
