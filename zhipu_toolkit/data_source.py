@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from zhipuai import ZhipuAI
 
 from zhenxun.configs.config import BotConfig
+from zhenxun.services.log import logger
 from zhenxun.configs.path_config import IMAGE_PATH
 
 from .config import ChatConfig
@@ -33,9 +34,11 @@ async def cache_group_message(event: GroupMessageEvent):
     )
 
     gid = str(event.group_id)
+    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {msg[:100]}", "zhipu_toolkit")
     if gid in GROUP_MSG_CACHE:
         if len(GROUP_MSG_CACHE[gid]) >= 20:
             GROUP_MSG_CACHE[gid].pop(0)
+            logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit")
 
         GROUP_MSG_CACHE[gid].append(msg)
     else:
@@ -142,8 +145,10 @@ class ChatManager:
             uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid]
         )
         if isinstance(result, list):
+            logger.info(f"USER {uid} 问题: {words} ---- 触发内容审查", "zhipu_toolkit")
             return result
         await cls.add_message(result, uid, role="assistant")
+        logger.info(f"USER {uid} 问题：{words} ---- 回答：{result}", "zhipu_toolkit")
         return [MessageSegment.text(result)]
 
     @classmethod
@@ -180,6 +185,10 @@ class ChatManager:
                 )
             elif segment.type == "text":
                 message += segment.data["text"]
+            elif segment.type == "at":
+                message += f"@{segment.data['qq']}"
+            elif segment.type == "share":
+                message += f"[分享内容,标题:{segment.data['title']}]"
         return message
 
     @classmethod
@@ -209,7 +218,7 @@ class ChatManager:
             [
                {
                   "role": "system",
-                  "content": "你需要遵循以下要求，同时保证回应中不包含聊天记录格式"
+                  "content": f"你需要遵循以下要求，同时保证回应中不包含聊天记录格式。{ChatConfig.get('SOUL')}"
                },
                 {
                     "role": "user",
@@ -218,9 +227,12 @@ class ChatManager:
             ],
         )
         if isinstance(result, list):
+            logger.info(f"GROUP {gid} USER {uid} ---- 伪人触发内容审查", "zhipu_toolkit")
             return
         if "<EMPTY>" in result:
+           logger.info(f"GROUP {gid} USER {uid} ---- 伪人不需要回复，已被跳过", "zhipu_toolkit")
             return
+        logger.info(f"GROUP {gid} USER {uid}  ---- 伪人回复: {result}", "zhipu_toolkit")
         return MessageSegment.text(result)
 
     @classmethod
