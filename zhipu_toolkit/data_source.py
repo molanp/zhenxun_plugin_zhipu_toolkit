@@ -341,7 +341,8 @@ class ChatManager:
                         5,
                         5,
                     )
-                    return [
+                    
+                return [
                         MessageSegment.text("输入内容包含不安全或敏感内容，你已被封禁5分钟")
                     ]
             else:  # history
