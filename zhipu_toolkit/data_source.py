@@ -272,7 +272,7 @@ class ChatManager:
                     "content": head + content + foot,
                 },
             ],
-            event,
+            event, True
         )
         if isinstance(result, list):
             logger.warning(
@@ -312,6 +312,7 @@ class ChatManager:
         model: str,
         messages: list,
         event: MessageEvent | GroupMessageEvent,
+        impersonation: bool = False
     ) -> str | list[MessageSegment]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -332,16 +333,17 @@ class ChatManager:
                     uid, ChatConfig.get("IMPERSONATION_MODEL"), messages, event
                 )
             elif "role" in error:
-                logger.warning(f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {event.user_id} 5 分钟", "zhipu_toolkit")
-                await BanConsole.ban(
-                    str(event.user_id),
-                    str(event.group_id) if hasattr(event, "group_id") else None, # type: ignore
-                    5,
-                    5,
-                )
-                return [
-                    MessageSegment.text("输入内容包含不安全或敏感内容，你已被封禁5分钟")
-                ]
+                if not impersonation:
+                    logger.warning(f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {event.user_id} 5 分钟", "zhipu_toolkit")
+                    await BanConsole.ban(
+                        str(event.user_id),
+                        str(event.group_id) if hasattr(event, "group_id") else None, # type: ignore
+                        5,
+                        5,
+                    )
+                    return [
+                        MessageSegment.text("输入内容包含不安全或敏感内容，你已被封禁5分钟")
+                    ]
             else:  # history
                 logger.warning(f"UID {uid} 对话历史记录触发内容审查: 清理历史记录", "zhipu_toolkit")
                 await cls.clear_history(uid)
