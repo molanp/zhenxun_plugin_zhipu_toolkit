@@ -18,6 +18,7 @@ from zhipuai import ZhipuAI
 
 from zhenxun.configs.config import BotConfig, Config
 from zhenxun.configs.path_config import IMAGE_PATH
+from zhenxun.models.ban_console import BanConsole
 from zhenxun.services.log import logger
 
 from .config import ChatConfig
@@ -175,7 +176,7 @@ class ChatManager:
             return [MessageSegment.text("超出最大token限制: 4095")]
         await cls.add_message(words, uid)
         result = await cls.get_zhipu_result(
-            uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid]
+            uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], event
         )
         if isinstance(result, list):
             logger.info(
@@ -271,6 +272,7 @@ class ChatManager:
                     "content": head + content + foot,
                 },
             ],
+            event,
         )
         if isinstance(result, list):
             logger.warning(
@@ -305,7 +307,11 @@ class ChatManager:
 
     @classmethod
     async def get_zhipu_result(
-        cls, uid: str, model: str, messages: list
+        cls,
+        uid: str,
+        model: str,
+        messages: list,
+        event: MessageEvent | GroupMessageEvent,
     ) -> str | list[MessageSegment]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -319,10 +325,29 @@ class ChatManager:
                 ),
             )
         except Exception as e:
-            logger.warning(f"触发内容审查: {e!s}", "zhipu_toolkit")
-            return [
-                MessageSegment.text(f"{e!s}\n\n如需清理对话记录，请发送'清理我的会话'")
-            ]
+            error = str(e)
+            if "assistant" in error:
+                logger.warning(f"UID {uid} AI回复内容触发内容审查: 执行自动重试", "zhipu_toolkit")
+                return await cls.get_zhipu_result(
+                    uid, ChatConfig.get("IMPERSONATION_MODEL"), messages, event
+                )
+            elif "role" in error:
+                logger.warning(f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {event.user_id} 5 分钟", "zhipu_toolkit")
+                await BanConsole.ban(
+                    str(event.user_id),
+                    str(event.group_id) if hasattr(event, "group_id") else None, # type: ignore
+                    5,
+                    5,
+                )
+                return [
+                    MessageSegment.text("输入内容包含不安全或敏感内容，你已被封禁5分钟")
+                ]
+            else:  # history
+                logger.warning(f"UID {uid} 对话历史记录触发内容审查: 清理历史记录", "zhipu_toolkit")
+                await cls.clear_history(uid)
+                return [
+                    MessageSegment.text("历史记录包含违规内已被清除，请重新开始对话")
+                ]
         return response.choices[0].message.content  # type: ignore
 
     @classmethod
