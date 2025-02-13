@@ -12,6 +12,7 @@ require("nonebot_plugin_alconna")
 from nonebot.adapters.onebot.v11 import (
     Bot,
     GroupMessageEvent,
+    Event,
     Message,
     MessageEvent,
     MessageSegment,
@@ -31,12 +32,13 @@ from .data_source import (
 )
 
 
-async def is_to_me(bot, event: MessageEvent, state) -> bool:
-    msg = event.get_plaintext()
+async def is_to_me(event: Event) -> bool:
+    msg = event
+    .get_message().extract_plain_text()
     for nickname in nicknames:
         if nickname in msg:
             return True
-    return bool(event.is_tome())
+    return event.is_tome()
 
 
 draw_pic = on_alconna(
