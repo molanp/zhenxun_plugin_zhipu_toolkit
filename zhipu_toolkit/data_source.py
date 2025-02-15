@@ -250,7 +250,7 @@ class ChatManager:
         content = "".join(
             f"{msg.nickname} ({msg.uid})说:\n{msg.msg}\n\n" for msg in group_msg
         )
-        head = f"你在一个QQ群里，群号是{gid},当前和你说话的人昵称是'{nickname}'', QQ号是{uid}, 请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，只回复<EMPTY>。下面是群组的聊天记录：\n\n"  # noqa: E501
+        head = f"你在一个QQ群里，请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复<EMPTY>。下面是群组的聊天记录：\n\n"  # noqa: E501
         foot = "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式，禁止重复聊天记录。不允许有无意义的语气词和emoji。"  # noqa: E501
         soul = (
             ChatConfig.get("SOUL")
@@ -272,7 +272,8 @@ class ChatManager:
                     "content": head + content + foot,
                 },
             ],
-            event, True
+            event,
+            True,
         )
         if isinstance(result, list):
             logger.warning(
@@ -312,7 +313,7 @@ class ChatManager:
         model: str,
         messages: list,
         event: MessageEvent | GroupMessageEvent,
-        impersonation: bool = False
+        impersonation: bool = False,
     ) -> str | list[MessageSegment]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -328,25 +329,38 @@ class ChatManager:
         except Exception as e:
             error = str(e)
             if "assistant" in error:
-                logger.warning(f"UID {uid} AI回复内容触发内容审查: 执行自动重试", "zhipu_toolkit")
-                return await cls.get_zhipu_result(
-                    uid, ChatConfig.get("IMPERSONATION_MODEL"), messages, event
+                if not impersonation:
+                    soul = (
+                        ChatConfig.get("SOUL")
+                        if ChatConfig.get("IMPERSONATION_SOUL") is False
+                        else ChatConfig.get("IMPERSONATION_SOUL")
+                    )
+                else:
+                    soul = ChatConfig.get("SOUL")
+                logger.warning(
+                    f"UID {uid} AI回复内容触发内容审查: 执行自动重试", "zhipu_toolkit"
                 )
+                return await cls.get_zhipu_result(uid, soul, messages, event)
             elif "role" in error:
                 if not impersonation:
-                    logger.warning(f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {event.user_id} 5 分钟", "zhipu_toolkit")
+                    logger.warning(
+                        f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {event.user_id} 5 分钟",
+                        "zhipu_toolkit",
+                    )
                     await BanConsole.ban(
                         str(event.user_id),
-                        str(event.group_id) if hasattr(event, "group_id") else None, # type: ignore
+                        str(event.group_id) if hasattr(event, "group_id") else None,  # type: ignore
                         5,
                         5,
                     )
-                    
+
                 return [
-                        MessageSegment.text("输入内容包含不安全或敏感内容，你已被封禁5分钟")
-                    ]
+                    MessageSegment.text("输入内容包含不安全或敏感内容，你已被封禁5分钟")
+                ]
             else:  # history
-                logger.warning(f"UID {uid} 对话历史记录触发内容审查: 清理历史记录", "zhipu_toolkit")
+                logger.warning(
+                    f"UID {uid} 对话历史记录触发内容审查: 清理历史记录", "zhipu_toolkit"
+                )
                 await cls.clear_history(uid)
                 return [
                     MessageSegment.text("历史记录包含违规内已被清除，请重新开始对话")
