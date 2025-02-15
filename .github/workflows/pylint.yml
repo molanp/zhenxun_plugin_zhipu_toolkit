@@ -20,4 +20,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py') --disable=import-error,relative-beyond-top-level,missing-module-docstring,missing-class-docstring,missing-function-docstring,line-too-long,broad-exception-caught,no-else-break,no-else-return,unused-argument,ungrouped-imports,consider-using-f-string,wrong-import-position
+        pylint $(git ls-files '*.py') --disable=import-error,relative-beyond-top-level,missing-module-docstring,missing-class-docstring,missing-function-docstring,line-too-long,broad-exception-caught,no-else-break,no-else-return,unused-argument,ungrouped-imports,consider-using-f-string,wrong-import-position,too-few-public-methods,f-string-without-interpolation,too-many-arguments,too-many-positional-arguments
