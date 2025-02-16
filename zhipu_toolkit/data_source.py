@@ -59,9 +59,6 @@ async def cache_group_message(event: GroupMessageEvent, self=None) -> None:
         GROUP_MSG_CACHE[gid] = [msg]
 
 
-import re
-from nonebot.adapters.onebot.v11 import MessageSegment
-
 async def str2msg(message: str) -> list[MessageSegment]:
     at_pattern = r"@(\d+)"
     image_pattern = r"!\[([^\]]+)\]"
