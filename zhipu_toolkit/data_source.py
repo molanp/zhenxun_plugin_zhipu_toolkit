@@ -67,7 +67,6 @@ async def str2msg(message: str) -> list[MessageSegment]:
     message = message.removesuffix("。")
     # Combine both patterns into a single pattern
     combined_pattern = re.compile(f"({at_pattern})|({image_pattern})")
-    
     for match in re.finditer(combined_pattern, message):
         if match.start() > last_pos:
             segments.append(MessageSegment.text(message[last_pos:match.start()]))
@@ -80,7 +79,6 @@ async def str2msg(message: str) -> list[MessageSegment]:
         last_pos = match.end()
     if last_pos < len(message):
         segments.append(MessageSegment.text(message[last_pos:]))
-    
     return segments
 
 async def submit_task_to_zhipuai(message: str):
