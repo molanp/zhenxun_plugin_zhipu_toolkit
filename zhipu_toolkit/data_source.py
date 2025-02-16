@@ -59,21 +59,32 @@ async def cache_group_message(event: GroupMessageEvent, self=None) -> None:
         GROUP_MSG_CACHE[gid] = [msg]
 
 
-async def parse_at(message: str) -> list[MessageSegment]:
+import re
+from nonebot.adapters.onebot.v11 import MessageSegment
+
+async def str2msg(message: str) -> list[MessageSegment]:
     at_pattern = r"@(\d+)"
+    image_pattern = r"!\[([^\]]+)\]"
     segments = []
     last_pos = 0
     message = message.removesuffix("。")
-    for match in re.finditer(at_pattern, message):
+    # Combine both patterns into a single pattern
+    combined_pattern = re.compile(f"({at_pattern})|({image_pattern})")
+    
+    for match in re.finditer(combined_pattern, message):
         if match.start() > last_pos:
-            segments.append(MessageSegment.text(message[last_pos : match.start()]))
-        uid = match.group(1)
-        segments.append(MessageSegment.at(uid))
+            segments.append(MessageSegment.text(message[last_pos:match.start()]))
+        if match.group(1):
+            uid = match.group(1)
+            segments.append(MessageSegment.at(uid))
+        elif match.group(3):
+            img_url = match.group(3)
+            segments.append(MessageSegment.image(file=img_url))
         last_pos = match.end()
     if last_pos < len(message):
         segments.append(MessageSegment.text(message[last_pos:]))
+    
     return segments
-
 
 async def submit_task_to_zhipuai(message: str):
     client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -189,7 +200,7 @@ class ChatManager:
             f"USER {uid} NICKNAME {nickname} 问题：{words} ---- 回答：{result}",
             "zhipu_toolkit",
         )
-        return await parse_at(result)
+        return await str2msg(result)
 
     @classmethod
     async def add_message(cls, words: str, uid: str, role="user") -> None:
@@ -218,17 +229,15 @@ class ChatManager:
         message = ""
         for segment in event.get_message():
             if segment.type == "image":
-                message += "\n[图片,描述:{}]".format(
-                    await cls.__generate_image_description(
-                        segment.data["url"].replace("https://", "http://")
-                    )
+                url = segment.data["url"].replace("https://", "http://")
+                message += "\n![{}]\n(图片描述:{})".format(
+                   url,
+                    await cls.__generate_image_description(url)
                 )
             elif segment.type == "text":
                 message += segment.data["text"]
             elif segment.type == "at":
                 message += f"@{segment.data['qq']} "
-            elif segment.type == "share":
-                message += f"[分享内容,标题:{segment.data['title']}]"
         return message
 
     @classmethod
@@ -250,8 +259,8 @@ class ChatManager:
         content = "".join(
             f"{msg.nickname} ({msg.uid})说:\n{msg.msg}\n\n" for msg in group_msg
         )
-        head = "你在一个QQ群里，请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复<EMPTY>。下面是群组的聊天记录：\n\n"  # noqa: E501
-        foot = "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式，禁止重复聊天记录。不允许有无意义的语气词和emoji。"  # noqa: E501
+        head = "你在一个QQ群里，请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复<EMPTY>。如果需要发送图片，你可以使用![url]发送，下面是群组的聊天记录：\n\n"  # noqa: E501
+        foot = "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不允许有无意义的语气词和emoji。"  # noqa: E501
         soul = (
             ChatConfig.get("SOUL")
             if ChatConfig.get("IMPERSONATION_SOUL") is False
@@ -304,7 +313,7 @@ class ChatManager:
                 "msg": result,
             },
         )
-        return await parse_at(result)
+        return await str2msg(result)
 
     @classmethod
     async def get_zhipu_result(
@@ -329,18 +338,10 @@ class ChatManager:
         except Exception as e:
             error = str(e)
             if "assistant" in error:
-                if not impersonation:
-                    soul = (
-                        ChatConfig.get("SOUL")
-                        if ChatConfig.get("IMPERSONATION_SOUL") is False
-                        else ChatConfig.get("IMPERSONATION_SOUL")
-                    )
-                else:
-                    soul = ChatConfig.get("SOUL")
                 logger.warning(
                     f"UID {uid} AI回复内容触发内容审查: 执行自动重试", "zhipu_toolkit"
                 )
-                return await cls.get_zhipu_result(uid, soul, messages, event)
+                return await cls.get_zhipu_result(uid, model, messages, event, impersonation)
             elif "role" in error:
                 if not impersonation:
                     logger.warning(
