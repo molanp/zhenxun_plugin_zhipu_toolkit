@@ -337,7 +337,7 @@ class ChatManager:
                     f"UID {uid} AI回复内容触发内容审查: 执行自动重试", "zhipu_toolkit"
                 )
                 return await cls.get_zhipu_result(uid, model, messages, event, impersonation)
-            elif "role" in error:
+            elif "user" in error:
                 if not impersonation:
                     logger.warning(
                         f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {event.user_id} 5 分钟",
