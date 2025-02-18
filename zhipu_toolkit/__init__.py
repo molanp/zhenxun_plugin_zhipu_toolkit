@@ -31,7 +31,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="0.7-rc1",
+        version="0.7-rc2",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
