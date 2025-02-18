@@ -169,7 +169,7 @@ class ChatManager:
         if message.strip() == "":
             result = await hello()
             return [MessageSegment.text(result[0]), MessageSegment.image(result[1])]
-        words = "现在时间是{}，我的名字是'{}'。{}".format(
+        words = "现在时间是`{}`，此日期仅供你参考，无任何意义。我的名字是`{}`。{}".format(
             datetime.datetime.fromtimestamp(event.time).strftime("%Y-%m-%d %H:%M:%S"),
             nickname,
             message,
@@ -254,7 +254,11 @@ class ChatManager:
         content = "".join(
             f"{msg.nickname} ({msg.uid})说:\n{msg.msg}\n\n" for msg in group_msg
         )
-        head = "你在一个QQ群里，请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复<EMPTY>。如果需要发送图片，你可以使用`![图片url]`这种格式发送，下面是群组的聊天记录：\n\n"  # noqa: E501
+        my_info = await bot.get_group_member_info(
+            group_id=int(gid), user_id=event.self_id
+        )
+        my_name = my_info["card"] or my_info["nickname"] 
+        head = f"你在一个QQ群里，你的qq是{event.self_id}，你的名字是`{my_name}`。请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。如果需要发送图片，你可以使用`![图片url]`这种格式发送，下面是群组的聊天记录：\n\n"  # noqa: E501
         foot = "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不允许有无意义的语气词和emoji。"  # noqa: E501
         soul = (
             ChatConfig.get("SOUL")
@@ -297,14 +301,11 @@ class ChatManager:
             f"GROUP {gid} USER {uid} NICKNAME {nickname}  ---- 伪人回复: {result}",
             "zhipu_toolkit",
         )
-        my_info = await bot.get_group_member_info(
-            group_id=int(gid), user_id=event.self_id
-        )
         await cache_group_message(
             event,
             {
                 "uid": my_info["user_id"],
-                "nickname": my_info["card"] or my_info["nickname"],
+                "nickname": my_name,
                 "msg": result,
             },
         )
