@@ -63,30 +63,49 @@ async def str2msg(message: str) -> list[MessageSegment]:
     """
     将字符串消息转换为消息段列表。
 
-    该函数解析输入的字符串消息，将其中的 `@` 及 Markdown 图片格式 `![图片描述](图片URL)` 转换为对应的消息段。
+    该函数解析输入的字符串消息，将其中的 `@` 和 Markdown 图片格式 `![图片描述](图片URL)` 转换为对应的消息段。
 
     :param message: 输入的字符串消息。
     :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
     """
-    at_pattern = r"@(\d+)"
-    image_pattern = r"!\[.*?\]\((.*?)\)"
     segments = []
-    last_pos = 0
     message = message.removesuffix("。")
-    combined_pattern = re.compile(f"({at_pattern})|({image_pattern})")
-    for match in re.finditer(combined_pattern, message):
+
+    # 首先处理@用户
+    at_pattern = r"@(\d+)"
+    last_pos = 0
+    for match in re.finditer(at_pattern, message):
         if match.start() > last_pos:
             segments.append(MessageSegment.text(message[last_pos:match.start()]))
-        if match.group(1):
-            uid = match.group(1)
-            segments.append(MessageSegment.at(uid))
-        elif match.group(3):
-            img_url = match.group(3)
-            segments.append(MessageSegment.image(file=img_url))
+        uid = match.group(1)
+        segments.append(MessageSegment.at(uid))
         last_pos = match.end()
     if last_pos < len(message):
-        segments.append(MessageSegment.text(message[last_pos:]))
+        remaining_message = message[last_pos:]
+    else:
+        remaining_message = ''
+
+    # 如果在处理@的过程中没有剩余文本，直接处理整个消息
+    if not remaining_message:
+        remaining_message = message
+
+    # 接着处理图片链接
+    image_pattern = r"!\[.*?\]\((.*?)\)"
+    last_pos = 0
+    temp_segments = []
+    for match in re.finditer(image_pattern, remaining_message):
+        if match.start() > last_pos:
+            temp_segments.append(MessageSegment.text(remaining_message[last_pos:match.start()]))
+        img_url = match.group(1)
+        temp_segments.append(MessageSegment.image(file=img_url))
+        last_pos = match.end()
+    if last_pos < len(remaining_message):
+        temp_segments.append(MessageSegment.text(remaining_message[last_pos:]))
+
+    # 将处理后的片段合并
+    segments.extend(temp_segments)
     return segments
+
 
 async def submit_task_to_zhipuai(message: str):
     client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
