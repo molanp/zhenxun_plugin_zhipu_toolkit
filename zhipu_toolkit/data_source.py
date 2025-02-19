@@ -62,19 +62,18 @@ async def cache_group_message(event: GroupMessageEvent, self=None) -> None:
 async def str2msg(message: str) -> list[MessageSegment]:
     """
     将字符串消息转换为消息段列表。
-
+    
     该函数解析输入的字符串消息，将其中的 `@` 和 Markdown 图片格式 `![图片描述](图片URL)` 转换为对应的消息段。
-
+    
     :param message: 输入的字符串消息。
     :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
     """
     segments = []
     message = message.removesuffix("。")
-
     # 首先处理@用户
     at_pattern = r"@(\d+)"
     last_pos = 0
-    for match in re.finditer(at_pattern, message):
+    for match in re.finditer(at_pattern, message, re.DOTALL):
         if match.start() > last_pos:
             segments.append(MessageSegment.text(message[last_pos:match.start()]))
         uid = match.group(1)
@@ -93,7 +92,7 @@ async def str2msg(message: str) -> list[MessageSegment]:
     image_pattern = r"!\[.*?\]\((.*?)\)"
     last_pos = 0
     temp_segments = []
-    for match in re.finditer(image_pattern, remaining_message):
+    for match in re.finditer(image_pattern, remaining_message, re.DOTALL):
         if match.start() > last_pos:
             temp_segments.append(MessageSegment.text(remaining_message[last_pos:match.start()]))
         img_url = match.group(1)
@@ -372,8 +371,8 @@ class ChatManager:
                     )
                     await BanConsole.ban(
                         str(event.user_id),
-                        str(event.group_id) if hasattr(event, "group_id") else None,  # type: ignore
-                        5,
+                        None,
+                        9,
                         5,
                     )
 
