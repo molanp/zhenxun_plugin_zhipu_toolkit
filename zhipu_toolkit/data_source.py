@@ -372,8 +372,8 @@ class ChatManager:
                     await BanConsole.ban(
                         str(event.user_id),
                         None,
-                        9,
-                        5,
+                        9999,
+                        300,
                     )
 
                 return [
