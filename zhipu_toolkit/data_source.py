@@ -349,7 +349,7 @@ class ChatManager:
             return
 
         content = "".join(
-            f"{msg.nickname} ({msg.uid})说:\n{msg.msg}\n\n" for msg in group_msg
+            f"[{msg.nickname}({msg.uid})]:{msg.msg}\n\n" for msg in group_msg
         )
         my_info = await bot.get_group_member_info(group_id=gid, user_id=session.self_id)
         my_name = my_info["card"] or my_info["nickname"]
