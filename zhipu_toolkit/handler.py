@@ -47,7 +47,7 @@ draw_pic = on_alconna(
 )
 
 draw_video = on_alconna(
-    Alconna("生成视频", Args["message?", AllParam], meta=CommandMeta(compact=True)),
+    Alconna("生成视频", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
     priority=5,
     block=True,
 )
@@ -193,7 +193,7 @@ async def handle_check(msg: str):
             await draw_pic.send(Text(f"错了：{e}"), reply_to=True)
 
 
-@draw_video.got_path("message", prompt="你要制作什么视频呢")
+@draw_video.got_path("msg", prompt="你要制作什么视频呢")
 async def submit_task(msg: str):
     if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
