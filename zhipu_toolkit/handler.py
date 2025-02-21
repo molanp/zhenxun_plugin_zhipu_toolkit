@@ -3,41 +3,41 @@ import random
 import re
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
-from nonebot import on_message, on_regex, require
+from nonebot import get_driver, on_message, on_regex, require
 from zhipuai import ZhipuAI
 
 from zhenxun.services.log import logger
+from zhenxun.utils.rules import ensure_group
 
 require("nonebot_plugin_alconna")
-from nonebot.adapters.onebot.v11 import (
-    Bot,
-    GroupMessageEvent,
-    Event,
-    Message,
-    MessageEvent,
-    MessageSegment,
-)
-from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
+from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
-from nonebot.rule import is_type
-from nonebot_plugin_alconna import Image, Match, Text, on_alconna
+from nonebot_plugin_alconna import Image, Match, Text, UniMessage, UniMsg, on_alconna
+from nonebot_plugin_uninfo import ADMIN, Session, UniSession
 
-from .config import ChatConfig, nicknames
+from .config import ChatConfig
 from .data_source import (
     ChatManager,
     ImpersonationStatus,
     cache_group_message,
     check_task_status_periodically,
+    hello,
+    split_text,
     submit_task_to_zhipuai,
 )
+from .rule import is_to_me
+
+driver = get_driver()
 
 
-async def is_to_me(event: Event) -> bool:
-    msg = event.get_message().extract_plain_text()
-    for nickname in nicknames:
-        if nickname in msg:
-            return True
-    return event.is_tome()
+@driver.on_startup
+async def handle_connect():
+    await ChatManager.initialize()
+
+
+@driver.on_shutdown
+async def handle_disconnect():
+    await ChatManager.save()
 
 
 draw_pic = on_alconna(
@@ -55,13 +55,13 @@ draw_video = on_alconna(
 byd_mode = on_regex(
     r"(启用|禁用)伪人模式\s*(?:/\d+)?",
     priority=5,
-    permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
+    permission=ADMIN(),
     block=True,
 )
 
 normal_chat = on_message(rule=is_to_me, priority=998, block=True)
 
-byd_chat = on_message(rule=is_type(GroupMessageEvent), priority=999, block=False)
+byd_chat = on_message(rule=ensure_group, priority=999, block=False)
 
 clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 
@@ -71,8 +71,8 @@ clear_all_chat = on_alconna(
 
 clear_group_chat = on_alconna(
     Alconna("清理群会话"),
-    rule=is_type(GroupMessageEvent),
-    permission=SUPERUSER | GROUP_ADMIN | GROUP_OWNER,
+    rule=ensure_group,
+    permission=ADMIN(),
     priority=5,
     block=True,
 )
@@ -85,81 +85,72 @@ async def _(msg: Match[str]):
 
 
 @draw_video.handle()
-async def _(message: Match[str]):
-    if message.available:
-        draw_video.set_path_arg("message", str(message.result))
+async def _(msg: Match[str]):
+    if msg.available:
+        draw_video.set_path_arg("msg", str(msg.result))
 
 
 @byd_mode.handle()
-async def _(bot: Bot, event: MessageEvent):
+async def _(bot: Bot, event: Event, session: Session = UniSession()):
     command = event.get_plaintext()
     if match := re.match(r"(启用|禁用)伪人模式(?:\s*(\d+))?", command):
         action = match[1]
         if group_id := match[2]:
-            if not await SUPERUSER(bot, event):
+            if session.user.id not in bot.config.superusers:
                 return
 
             if await ImpersonationStatus.action(action, int(group_id)):
-                await byd_mode.send(
-                    MessageSegment.text(f"群聊 {group_id} 已 {action} 伪人模式"),
-                    reply_message=True,
+                await UniMessage(Text(f"群聊 {group_id} 已 {action} 伪人模式")).send(
+                    reply_to=True
                 )
-                logger.info(
-                    f"SUPERUSER {event.user_id} GROUP {group_id} 已{action}伪人模式",
-                    "zhipu_toolkit",
-                )
+                logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
             else:
-                await byd_mode.send(
-                    MessageSegment.text(f"群聊 {group_id} 伪人模式不可重复{action}"),
-                    reply_message=True,
+                await UniMessage(
+                    Text(f"群聊 {group_id} 伪人模式不可重复 {action}")
+                ).send(reply_to=True)
+        elif ensure_group(session):
+            if await ImpersonationStatus.action(action, session.scene.id):
+                await UniMessage(Text(f"当前群聊已 {action} 伪人模式")).send(
+                    reply_to=True
                 )
-        elif isinstance(event, GroupMessageEvent):
-            if await ImpersonationStatus.action(action, event.group_id):
-                await byd_mode.send(
-                    MessageSegment.text(f"当前群聊已 {action} 伪人模式"),
-                    reply_message=True,
-                )
-                logger.info(
-                    f"Admin {event.user_id} GROUP {event.group_id} 已{action}伪人模式",
-                    "zhipu_toolkit",
-                )
+                logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
             else:
-                await byd_mode.send(
-                    MessageSegment.text(f"当前群聊伪人模式不可重复{action}"),
-                    reply_message=True,
+                await UniMessage(Text(f"当前群聊伪人模式不可重复 {action}")).send(
+                    reply_to=True
                 )
 
 
 @normal_chat.handle()
-async def _(event: MessageEvent):
+async def _(msg: UniMsg, session: Session = UniSession()):
+    if msg.extract_plain_text() == "":
+        result = await hello()
+        await UniMessage([Text(result[0]), Image(path=result[1])]).finish(reply_to=True)
     if ChatConfig.get("API_KEY") == "":
-        await normal_chat.send(
-            Message(MessageSegment.text("请先设置智谱AI的APIKEY!")), reply_message=True
-        )
+        await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
     else:
-        await normal_chat.send(
-            Message(Message(await ChatManager.send_message(event))),
-            reply_message=True,
-        )
+        result = await ChatManager.normal_chat_result(msg, session)
+        for r, delay in await split_text(result):
+            await UniMessage(r).send()
+            await asyncio.sleep(delay)
 
 
 @byd_chat.handle()
-async def _(event: GroupMessageEvent, bot: Bot):
-    if await ImpersonationStatus.check(event):
+async def _(msg: UniMsg, bot: Bot, session: Session = UniSession()):
+    if await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
             return
-        await cache_group_message(event)
+        await cache_group_message(msg, session)
         if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
-            result = await ChatManager.impersonation_result(event, bot)
+            result = await ChatManager.impersonation_result(msg, session, bot)
             if result:
-                await byd_chat.send(Message(result))
+                await UniMessage(result).send()
     else:
-        logger.debug(f"GROUP {event.group_id} 伪人模式被禁用.skip...")
+        logger.debug("伪人模式被禁用.skip...", "zhipu_toolkit", session=session)
 
 
 @clear_my_chat.handle()
-async def _(event: MessageEvent):
-    uid = str(event.sender.user_id)
+async def _(session: Session = UniSession()):
+    uid = session.user.id
     await clear_my_chat.send(
         Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"),
         reply_to=True,
@@ -175,8 +166,8 @@ async def _():
 
 
 @clear_group_chat.handle()
-async def _(event: GroupMessageEvent):
-    count = await ChatManager.clear_history(f"g-{event.group_id}")
+async def _(session: Session = UniSession()):
+    count = await ChatManager.clear_history(f"g-{session.scene.id}")
     await clear_group_chat.send(
         Text(f"已清理 {count} 条用户数据"),
         reply_to=True,
@@ -203,12 +194,12 @@ async def handle_check(msg: str):
 
 
 @draw_video.got_path("message", prompt="你要制作什么视频呢")
-async def submit_task(message: str):
+async def submit_task(msg: str):
     if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
-            response = await submit_task_to_zhipuai(message)
+            response = await submit_task_to_zhipuai(msg)
         except Exception as e:
             await draw_video.send(Text(str(e)))
         else:
