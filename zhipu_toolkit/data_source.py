@@ -386,6 +386,8 @@ class ChatManager:
         result = result[0]
         if ":" in result:
             result = result.split(":")[-1].strip("\n")
+        if "：" in result:
+            result = result.split("：")[-1].strip("\n")
         if "<EMPTY>" in result:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
