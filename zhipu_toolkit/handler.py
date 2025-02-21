@@ -4,6 +4,7 @@ import re
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import get_driver, on_message, on_regex, require
+from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
 
 from zhenxun.services.log import logger
@@ -38,6 +39,18 @@ async def handle_connect():
 @driver.on_shutdown
 async def handle_disconnect():
     await ChatManager.save()
+
+
+@scheduler.scheduled_job(
+    "interval",
+    minutes=5,
+)
+async def save_chat_history():
+    try:
+        await ChatManager.save()
+        logger.debug("保存对话数据", "zhipu_toolkit")
+    except Exception as e:
+        logger.error("保存对话数据", "zhipu_toolkit", e=e)
 
 
 draw_pic = on_alconna(
