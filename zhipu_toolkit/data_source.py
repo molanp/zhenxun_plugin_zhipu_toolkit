@@ -391,7 +391,7 @@ class ChatManager:
                     )
                     await BanConsole.ban(
                         session.user.id,
-                        1,
+                        session.scene.id if ensure_group(session) else None,
                         9999,
                         300,
                     )
