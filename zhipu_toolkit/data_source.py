@@ -235,11 +235,16 @@ class ChatManager:
         await cls.add_any_message(uid, result[2])
         tool_result = await cls.parse_function_call(uid, session, result[2].tool_calls)
         if tool_result is not None:
-            return (
-                await cls.get_zhipu_result(
+            result = await cls.get_zhipu_result(
                     uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], session
                 )
-            )[0]
+            result = await extract_message_content(result[0])
+            logger.info(
+                f"NICKNAME `{nickname}` 问题：{words} ---- 回答：{result}",
+                "zhipu_toolkit",
+                session=session,
+            )
+            return result
         if result[0] is not None:
             result = await extract_message_content(result[0])
             logger.info(
