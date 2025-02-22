@@ -24,14 +24,14 @@ __plugin_meta__ = PluginMetadata(
         清理我的会话:   用于清理你与AI的聊天记录
         清理群会话: (仅管理员)用于清理本群的大杂烩记录，仅当分组模式为group时生效
         启用/禁用伪人模式:  开启或关闭当前群聊的伪人模式
-    或者与机器人聊天，
+    或者与机器人聊天，{BotConfig.self_nickname}是可以看懂大家的表情包和链接的...
     例如；
-        @Bot抱抱
+        @Bot 抱抱
         {BotConfig.self_nickname}老婆
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="0.7-rc3",
+        version="0.7",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令

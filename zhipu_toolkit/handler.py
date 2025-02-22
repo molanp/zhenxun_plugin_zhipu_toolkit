@@ -143,6 +143,8 @@ async def _(msg: UniMsg, session: Session = UniSession()):
         await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
     else:
         result = await ChatManager.normal_chat_result(msg, session)
+        if result is None:
+            return
         for r, delay in await split_text(result):
             await UniMessage(r).send()
             await asyncio.sleep(delay)

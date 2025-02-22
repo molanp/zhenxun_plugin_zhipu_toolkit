@@ -3,7 +3,7 @@ import datetime
 import os
 from pathlib import Path
 import random
-from typing import ClassVar
+from typing import Any, ClassVar
 import uuid
 
 import aiofiles
@@ -12,10 +12,15 @@ from nonebot_plugin_alconna import Text, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
 from zhipuai import ZhipuAI
+from zhipuai.types.chat.chat_completion import (
+    CompletionMessage,
+    CompletionMessageToolCall,
+)
 
 from zhenxun.configs.config import BotConfig, Config
 from zhenxun.configs.path_config import DATA_PATH, IMAGE_PATH
 from zhenxun.models.ban_console import BanConsole
+from zhenxun.plugins.zhipu_toolkit.tools import ToolsManager
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
@@ -149,7 +154,6 @@ async def check_task_status_from_zhipuai(task_id: str):
 class ChatManager:
     chat_history: ClassVar[dict] = {}
     DATA_FILE_PATH: Path = DATA_PATH / "zhipu_toolkit"
-    chat_history_token: ClassVar[dict] = {}
     impersonation_group: ClassVar[dict] = {}
 
     @classmethod
@@ -188,7 +192,7 @@ class ChatManager:
             )
 
     @classmethod
-    async def normal_chat_result(cls, msg: UniMsg, session: Session) -> str:
+    async def normal_chat_result(cls, msg: UniMsg, session: Session) -> str | None:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
                 uid = session.user.id
@@ -211,7 +215,7 @@ class ChatManager:
                 session=session,
             )
             return "超出最大token限制: 4095"
-        await cls.add_message(words, uid)
+        await cls.add_user_message(words, uid)
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], session
         )
@@ -222,18 +226,43 @@ class ChatManager:
                 session=session,
             )
             return result[0]
-        result = await extract_message_content(result[0])
-        await cls.add_message(result, uid, role="assistant")
-        logger.info(
-            f"NICKNAME `{nickname}` 问题：{words} ---- 回答：{result}",
-            "zhipu_toolkit",
-            session=session,
+        assert result[2] is not None, (
+            "result[2] should not be None if result[1] is not False"
         )
-        return result
+        await cls.add_any_message(uid, result[2])
+        tool_result = await cls.parse_function_call(uid, session, result[2].tool_calls)
+        if tool_result is not None:
+            return (
+                await cls.get_zhipu_result(
+                    uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], session
+                )
+            )[0]
+        if result[0] is not None:
+            result = await extract_message_content(result[0])
+            logger.info(
+                f"NICKNAME `{nickname}` 问题：{words} ---- 回答：{result}",
+                "zhipu_toolkit",
+                session=session,
+            )
+            return result
 
     @classmethod
-    async def add_message(cls, words: str, uid: str, role="user") -> None:
-        cls.chat_history[uid].append({"role": role, "content": words})
+    async def add_user_message(cls, words: str, uid: str) -> None:
+        cls.chat_history[uid].append({"role": "user", "content": words})
+
+    @classmethod
+    async def add_any_message(cls, uid: str, message: CompletionMessage) -> None:
+        cls.chat_history[uid].append(message.model_dump())
+
+    @classmethod
+    async def add_tool_message(cls, uid: str, content: Any, tool_id: str) -> None:
+        if isinstance(content, dict):
+            function_result = ujson.dumps(content)
+        else:
+            function_result = str(content)
+        cls.chat_history[uid].append(
+            {"role": "tool", "content": function_result, "tool_call_id": tool_id}
+        )
 
     @classmethod
     async def add_system_message(cls, soul: str, uid: str) -> None:
@@ -319,15 +348,20 @@ class ChatManager:
         messages: list,
         session: Session,
         impersonation: bool = False,
-    ) -> tuple[str, bool]:
+    ) -> tuple[str, bool, CompletionMessage | None]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
+        tools = await ToolsManager.get_tools()
         try:
             response = await loop.run_in_executor(
                 None,
                 lambda: client.chat.completions.create(
-                    model=model, messages=messages, user_id=uid, request_id=request_id
+                    model=model,
+                    messages=messages,
+                    user_id=uid,
+                    request_id=request_id,
+                    tools=tools,
                 ),
             )
         except Exception as e:
@@ -356,16 +390,44 @@ class ChatManager:
                         300,
                     )
 
-                return "输入内容包含不安全或敏感内容，你已被封禁5分钟", False
-            else:  # history
+                return "输入内容包含不安全或敏感内容，你已被封禁5分钟", False, None
+            elif "history" in error:
                 logger.warning(
                     f"UID {uid} 对话历史记录触发内容审查: 清理历史记录",
                     "zhipu_toolkit",
                     session=session,
                 )
                 await cls.clear_history(uid)
-                return "历史记录包含违规内已被清除，请重新开始对话", False
-        return response.choices[0].message.content, True  # type: ignore
+                return "历史记录包含违规内已被清除，请重新开始对话", False, None
+            else:
+                return error, False, None
+        return response.choices[0].message.content, True, response.choices[0].message  # type: ignore
+
+    @classmethod
+    async def parse_function_call(
+        cls,
+        uid: str,
+        session: Session,
+        tools: list[CompletionMessageToolCall] | None,
+    ):
+        if tools:
+            tool_call = tools[0]
+            args = tool_call.function.arguments
+            try:
+                logger.info(f"调用函数 {tool_call.function.name}", session=session)
+                result = await ToolsManager.call_func(
+                    session, tool_call.function.name, args
+                )
+                await cls.add_tool_message(uid, result, tool_call.id)
+                return result
+            except Exception as e:
+                logger.warning(
+                    f"UID {uid} 工具调用失败",
+                    "zhipu_toolkit",
+                    session=session,
+                    e=e,
+                )
+                return
 
 
 class ImpersonationStatus:
