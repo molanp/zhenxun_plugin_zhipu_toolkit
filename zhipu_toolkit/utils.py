@@ -132,7 +132,7 @@ async def extract_message_content(msg: str) -> str:
     - str: 提取的实际消息内容。
     """
     pattern = re.compile(
-        r"^\[发送于 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} from .*?\]:(.*)$",
+        r"^\[发送于 .*?from .*?\]:(.*)$",
         re.DOTALL
     )
     match = pattern.match(msg)
