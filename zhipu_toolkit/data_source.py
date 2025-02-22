@@ -219,15 +219,18 @@ class ChatManager:
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], session
         )
-        if result[1] is False:
+        if result[1] == 1:
             logger.info(
                 f"NICKNAME `{nickname}` 问题: {words} ---- 触发内容审查",
                 "zhipu_toolkit",
                 session=session,
             )
             return result[0]
+        if result[1] == 2:
+            logger.error(f"获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session)
+            return f"出错了: {result[0]}"
         assert result[2] is not None, (
-            "result[2] should not be None if result[1] is not False"
+            "result[2] should not be None if result[1] is not 1 or 2"
         )
         await cls.add_any_message(uid, result[2])
         tool_result = await cls.parse_function_call(uid, session, result[2].tool_calls)
@@ -321,8 +324,11 @@ class ChatManager:
             session,
             True,
         )
-        if result[1] is False:
+        if result[1] == 1:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
+            return
+        if result[1] == 2:
+            logger.error(f"伪人获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session)
             return
         result = await extract_message_content(result[0])
         if "<EMPTY>" in result:
@@ -348,7 +354,7 @@ class ChatManager:
         messages: list,
         session: Session,
         impersonation: bool = False,
-    ) -> tuple[str, bool, CompletionMessage | None]:
+    ) -> tuple[str, int, CompletionMessage | None]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
@@ -385,12 +391,12 @@ class ChatManager:
                     )
                     await BanConsole.ban(
                         session.user.id,
-                        None,
+                        1,
                         9999,
                         300,
                     )
 
-                return "输入内容包含不安全或敏感内容，你已被封禁5分钟", False, None
+                return "输入内容包含不安全或敏感内容，你已被封禁5分钟", 1, None
             elif "history" in error:
                 logger.warning(
                     f"UID {uid} 对话历史记录触发内容审查: 清理历史记录",
@@ -398,10 +404,10 @@ class ChatManager:
                     session=session,
                 )
                 await cls.clear_history(uid)
-                return "历史记录包含违规内已被清除，请重新开始对话", False, None
+                return "历史记录包含违规内已被清除，请重新开始对话", 1, None
             else:
-                return error, False, None
-        return response.choices[0].message.content, True, response.choices[0].message  # type: ignore
+                return error, 2, None
+        return response.choices[0].message.content, 0, response.choices[0].message  # type: ignore
 
     @classmethod
     async def parse_function_call(
