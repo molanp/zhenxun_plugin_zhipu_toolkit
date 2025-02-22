@@ -20,11 +20,11 @@ from zhipuai.types.chat.chat_completion import (
 from zhenxun.configs.config import BotConfig, Config
 from zhenxun.configs.path_config import DATA_PATH, IMAGE_PATH
 from zhenxun.models.ban_console import BanConsole
-from zhenxun.plugins.zhipu_toolkit.tools import ToolsManager
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
 from .config import ChatConfig, GroupMessageModel
+from .tools import ToolsManager
 from .utils import extract_message_content, get_request_id, get_user_nickname, msg2str
 
 GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
