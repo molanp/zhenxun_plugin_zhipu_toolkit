@@ -3,13 +3,12 @@ import datetime
 import os
 from pathlib import Path
 import random
-import re
 from typing import ClassVar
 import uuid
 
 import aiofiles
 from nonebot.adapters import Bot
-from nonebot_plugin_alconna import At, Image, Text, UniMsg, Video
+from nonebot_plugin_alconna import Text, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
 from zhipuai import ZhipuAI
@@ -21,27 +20,9 @@ from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
 from .config import ChatConfig, GroupMessageModel
+from .utils import extract_message_content, get_request_id, get_user_nickname, msg2str
 
 GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
-
-
-async def __split_text(text: str, pattern: str, maxsplit: int) -> list[str]:
-    """辅助函数，用于分割文本"""
-    return re.split(pattern, text, maxsplit)
-
-
-async def split_text(text: str) -> list[tuple[list, float]]:
-    """文本切割"""
-    results = []
-    split_list = [
-        s for s in await __split_text(text, r"(?<!\?)[。？！\n](?!\?)", 3) if s.strip()
-    ]
-    for r in split_list:
-        next_char_index = text.find(r) + len(r)
-        if next_char_index < len(text) and text[next_char_index] == "？":
-            r += "？"
-        results.append((await parse_at(r), min(len(r) * 0.2, 3.0)))
-    return results
 
 
 async def cache_group_message(message: UniMsg, session: Session, self=None) -> None:
@@ -69,8 +50,8 @@ async def cache_group_message(message: UniMsg, session: Session, self=None) -> N
     else:
         msg = GroupMessageModel(
             uid=session.user.id,
-            nickname=await ChatManager.get_user_nickname(session),
-            msg=await ChatManager.parse_msg(message),
+            nickname=await get_user_nickname(session),
+            msg=await msg2str(message),
         )
 
     gid = session.scene.id
@@ -83,32 +64,6 @@ async def cache_group_message(message: UniMsg, session: Session, self=None) -> N
         GROUP_MSG_CACHE[gid].append(msg)
     else:
         GROUP_MSG_CACHE[gid] = [msg]
-
-
-async def parse_at(message: str) -> list:
-    """
-    将字符串消息转换为消息段列表。
-
-    该函数解析输入的字符串消息，将其中的 `@` 转换为对应的消息段，并将文本分割成每句话。
-
-    :param message: 输入的字符串消息。
-    :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
-    """
-    segments = []
-    message = message.removesuffix("。")
-    at_pattern = r"@(\d+)"
-    last_pos = 0
-
-    for match in re.finditer(at_pattern, message, re.DOTALL):
-        if match.start() > last_pos:
-            segments.append(Text(message[last_pos : match.start()]))
-        uid = match.group(1)
-        segments.append(At("user", uid))
-        last_pos = match.end()
-    if last_pos < len(message):
-        segments.append(Text(message[last_pos:]))
-
-    return segments
 
 
 async def submit_task_to_zhipuai(message: str):
@@ -129,7 +84,8 @@ async def submit_task_to_zhipuai(message: str):
         model=ChatConfig.get("VIDEO_MODEL"),
         prompt=message,
         with_audio=True,
-    )
+        request_id=await get_request_id(),
+    )  # type: ignore
 
 
 async def hello() -> list:
@@ -232,21 +188,6 @@ class ChatManager:
             )
 
     @classmethod
-    async def check_token(cls, uid: str, token_len: int):
-        return  # 暂时没用，文档似乎说是单条token最大4095
-        # if cls.chat_history_token.get(uid) is None:
-        #     cls.chat_history_token[uid] = 0
-        # cls.chat_history_token[uid] += token_len
-
-        # user_history = cls.chat_history.get(uid, [])
-        # while cls.chat_history_token[uid] > 4095 and len(user_history) > 1:
-        #     removed_token_len = len(user_history[1]["content"])
-        #     user_history = user_history[1:]
-        #     cls.chat_history_token[uid] -= removed_token_len
-
-        # cls.chat_history[uid] = user_history
-
-    @classmethod
     async def normal_chat_result(cls, msg: UniMsg, session: Session) -> str:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
@@ -259,9 +200,9 @@ class ChatManager:
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
-        nickname = await cls.get_user_nickname(session)
+        nickname = await get_user_nickname(session)
         await cls.add_system_message(ChatConfig.get("SOUL"), uid)
-        message = await cls.parse_msg(msg)
+        message = await msg2str(msg)
         words = f"[发送于 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} from {nickname}]:{message}"
         if len(words) > 4095:
             logger.warning(
@@ -281,18 +222,18 @@ class ChatManager:
                 session=session,
             )
             return result[0]
-        await cls.add_message(result[0], uid, role="assistant")
+        result = await extract_message_content(result[0])
+        await cls.add_message(result, uid, role="assistant")
         logger.info(
-            f"NICKNAME `{nickname}` 问题：{words} ---- 回答：{result[0]}",
+            f"NICKNAME `{nickname}` 问题：{words} ---- 回答：{result}",
             "zhipu_toolkit",
             session=session,
         )
-        return result[0]
+        return result
 
     @classmethod
     async def add_message(cls, words: str, uid: str, role="user") -> None:
         cls.chat_history[uid].append({"role": role, "content": words})
-        await cls.check_token(uid, len(words))
 
     @classmethod
     async def add_system_message(cls, soul: str, uid: str) -> None:
@@ -310,35 +251,6 @@ class ChatManager:
             count = len(cls.chat_history[uid])
             del cls.chat_history[uid]
         return count
-
-    @classmethod
-    async def parse_msg(cls, msg: UniMsg) -> str:
-        message = ""
-        for segment in msg:
-            if isinstance(segment, At):
-                message += f"@{segment.target} "
-            elif isinstance(segment, Image):
-                assert segment.url is not None
-                url = segment.url.replace(
-                    "https://multimedia.nt.qq.com.cn", "http://multimedia.nt.qq.com.cn"
-                )
-                message += (
-                    f"\n![{await cls.__generate_image_description(url)}]\n({url})"
-                )
-            elif isinstance(segment, Text):
-                message += segment.text
-        return message
-
-    @classmethod
-    async def get_user_nickname(cls, session: Session) -> str:
-        if (
-            hasattr(session.member, "nick")
-            and session.member is not None
-            and session.member.nick != ""
-            and session.member.nick is not None
-        ):
-            return session.member.nick
-        return session.user.name if session.user.name is not None else "未知"
 
     @classmethod
     async def impersonation_result(
@@ -383,11 +295,7 @@ class ChatManager:
         if result[1] is False:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
             return
-        result = result[0]
-        if ":" in result:
-            result = result.split(":")[-1].strip("\n")
-        if "：" in result:
-            result = result.split("：")[-1].strip("\n")
+        result = await extract_message_content(result[0])
         if "<EMPTY>" in result:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
@@ -414,13 +322,12 @@ class ChatManager:
     ) -> tuple[str, bool]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
+        request_id = await get_request_id()
         try:
             response = await loop.run_in_executor(
                 None,
                 lambda: client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    user_id=uid,
+                    model=model, messages=messages, user_id=uid, request_id=request_id
                 ),
             )
         except Exception as e:
@@ -459,36 +366,6 @@ class ChatManager:
                 await cls.clear_history(uid)
                 return "历史记录包含违规内已被清除，请重新开始对话", False
         return response.choices[0].message.content, True  # type: ignore
-
-    @classmethod
-    async def __generate_image_description(cls, url: str):
-        loop = asyncio.get_event_loop()
-        client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda: client.chat.completions.create(
-                    model=ChatConfig.get("IMAGE_UNDERSTANDING_MODEL"),
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "描述图片"},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {"url": url},
-                                },
-                            ],
-                        }
-                    ],
-                    user_id=str(uuid.uuid4()),
-                ),
-            )
-            result = response.choices[0].message.content  # type: ignore
-        except Exception:
-            result = ""
-        assert isinstance(result, str)
-        return result.replace("\n", "\\n")
 
 
 class ImpersonationStatus:

@@ -23,11 +23,6 @@ nicknames = plugin_config.nickname
 
 
 class GroupMessageModel(BaseModel):
-    """
-    群组消息模型，继承自BaseModel。
-
-    该模型用于定义群组消息的基本属性，包括用户ID、用户昵称和消息内容。
-    """
     uid: str
     """用户ID"""
     nickname: str

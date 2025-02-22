@@ -10,6 +10,8 @@ from zhipuai import ZhipuAI
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
+from .utils import split_text
+
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
@@ -23,7 +25,6 @@ from .data_source import (
     cache_group_message,
     check_task_status_periodically,
     hello,
-    split_text,
     submit_task_to_zhipuai,
 )
 from .rule import is_to_me
@@ -158,7 +159,7 @@ async def _(msg: UniMsg, bot: Bot, session: Session = UniSession()):
             if result:
                 await UniMessage(result).send()
     else:
-        logger.debug("伪人模式被禁用.skip...", "zhipu_toolkit", session=session)
+        logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
 
 
 @clear_my_chat.handle()
