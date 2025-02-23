@@ -11,7 +11,7 @@ class MuteTool(Tool):
     def __init__(self):
         super().__init__(
             name="mute",
-            description="禁言对话者或指定uid",
+            description="禁言对话者或指定的用户uid",
             parameters={
                 "type": "object",
                 "properties": {
@@ -35,19 +35,20 @@ class MuteTool(Tool):
             member_info = await bot.get_group_member_info(
                 group_id=gid, user_id=bot.self_id
             )
-            if member_info["role"] not in ["admin", "owner"]:
-                return "不是管理员，不能禁言"
+            bot_role = member_info["role"]
         except Exception:
-            return "禁言失败"
+            return "获取成员信息失败"
 
         try:
-            sender_info = await bot.get_group_member_info(
-                group_id=gid, user_id=uid
-            )
-            if sender_info["role"] in ["admin", "owner"]:
-                return "不能禁言管理员"
+            sender_info = await bot.get_group_member_info(group_id=gid, user_id=uid)
+            sender_role = sender_info["role"]
         except Exception:
-            return "禁言失败"
+            return "获取成员信息失败"
+
+        if bot_role not in ["admin", "owner"]:
+            return "不是管理员，不能禁言"
+        if bot_role == "admin" and sender_role in ["owner", "admin"]:
+            return "不能禁言对方"
 
         mute_time = random.randint(1, 100)
         try:
