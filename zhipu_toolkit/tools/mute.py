@@ -18,14 +18,18 @@ class MuteTool(Tool):
                     "uid": {
                         "type": "string",
                         "description": "需要禁言的对象，为空则禁言对话者",
-                    }
+                    },
+                    "minute": {
+                        "type": "integer",
+                        "description": "禁言时长，单位为分钟，默认为随机",
+                    },
                 },
                 "required": [],
             },
             func=self.Mute,
         )
 
-    async def Mute(self, session, uid: str | None = None) -> str:
+    async def Mute(self, session, uid: str | None = None, minute: int | None = None) -> str:
         if not ensure_group(session):
             return "不是群组环境，不能禁言"
         bot = get_bot(self_id=session.self_id)
@@ -50,7 +54,7 @@ class MuteTool(Tool):
         if bot_role == "admin" and sender_role in ["owner", "admin"]:
             return "不能禁言对方"
 
-        mute_time = random.randint(1, 100)
+        mute_time = minute or random.randint(1, 100)
         try:
             await bot.set_group_ban(
                 group_id=gid,
