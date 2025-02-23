@@ -7,7 +7,7 @@ from typing import Any, ClassVar
 import uuid
 
 import aiofiles
-from nonebot.adapters import Bot
+from nonebot import get_bot
 from nonebot_plugin_alconna import Text, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
@@ -227,7 +227,9 @@ class ChatManager:
             )
             return result[0]
         if result[1] == 2:
-            logger.error(f"获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session)
+            logger.error(
+                f"获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session
+            )
             return f"出错了: {result[0]}"
         assert result[2] is not None, (
             "result[2] should not be None if result[1] is not 1 or 2"
@@ -236,8 +238,8 @@ class ChatManager:
         tool_result = await cls.parse_function_call(uid, session, result[2].tool_calls)
         if tool_result is not None:
             result = await cls.get_zhipu_result(
-                    uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], session
-                )
+                uid, ChatConfig.get("CHAT_MODEL"), cls.chat_history[uid], session
+            )
             result = await extract_message_content(result[0])
             logger.info(
                 f"NICKNAME `{nickname}` 问题：{words} ---- 回答：{result}",
@@ -290,9 +292,7 @@ class ChatManager:
         return count
 
     @classmethod
-    async def impersonation_result(
-        cls, msg: UniMsg, session: Session, bot: Bot
-    ) -> str | None:
+    async def impersonation_result(cls, msg: UniMsg, session: Session) -> str | None:
         gid = session.scene.id
         if not (group_msg := GROUP_MSG_CACHE[gid]):
             return
@@ -300,6 +300,7 @@ class ChatManager:
         content = "".join(
             f"[{msg.nickname}({msg.uid})]:{msg.msg}\n\n" for msg in group_msg
         )
+        bot = get_bot(self_id=session.self_id)
         my_info = await bot.get_group_member_info(group_id=gid, user_id=session.self_id)
         my_name = my_info["card"] or my_info["nickname"]
         head = f"你在一个QQ群里，你的QQ是`{session.self_id}`，你的名字是`{my_name}`。请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，不知道说什么可以复读群友的话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n\n"  # noqa: E501
@@ -333,7 +334,9 @@ class ChatManager:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
             return
         if result[1] == 2:
-            logger.error(f"伪人获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session)
+            logger.error(
+                f"伪人获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session
+            )
             return
         result = await extract_message_content(result[0])
         if "<EMPTY>" in result:
@@ -364,6 +367,7 @@ class ChatManager:
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
         tools = await ToolsManager.get_tools()
+        logger.info(f"可调用工具: {ToolsManager.tools_registry.keys()}")
         try:
             response = await loop.run_in_executor(
                 None,

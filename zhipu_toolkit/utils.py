@@ -6,6 +6,8 @@ from nonebot_plugin_alconna import At, Image, Text, UniMsg
 from nonebot_plugin_uninfo import Session
 from zhipuai import ZhipuAI
 
+from zhenxun.configs.config import BotConfig
+
 from .config import ChatConfig
 
 
@@ -132,8 +134,8 @@ async def extract_message_content(msg: str) -> str:
     - str: 提取的实际消息内容。
     """
     pattern = re.compile(
-        r"^\[发送于 .*?from .*?\]:(.*)$",
-        re.DOTALL
+        rf"^(?:\[发送于 .*?from .*?\]|{BotConfig.self_nickname})\s*[:：](.*)$",
+        re.DOTALL,
     )
     match = pattern.match(msg)
     return match[1].strip() if match else msg.strip()

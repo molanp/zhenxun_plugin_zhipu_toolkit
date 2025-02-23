@@ -151,13 +151,13 @@ async def _(msg: UniMsg, session: Session = UniSession()):
 
 
 @byd_chat.handle()
-async def _(msg: UniMsg, bot: Bot, session: Session = UniSession()):
+async def _(msg: UniMsg, session: Session = UniSession()):
     if await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
             return
         await cache_group_message(msg, session)
         if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
-            result = await ChatManager.impersonation_result(msg, session, bot)
+            result = await ChatManager.impersonation_result(msg, session)
             if result:
                 await UniMessage(result).send()
     else:
