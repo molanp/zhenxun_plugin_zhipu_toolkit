@@ -207,7 +207,7 @@ class ChatManager:
         nickname = await get_user_nickname(session)
         await cls.add_system_message(ChatConfig.get("SOUL"), uid)
         message = await msg2str(msg)
-        words = f"[发送于 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} from `{nickname}`({session.user.id})]:{message}"
+        words = f"[发送于 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} from `{nickname}`]:{message}"
         if len(words) > 4095:
             logger.warning(
                 f"USER {uid} NICKNAME {nickname} 问题: {words} ---- 超出最大token限制: 4095",  # noqa: E501
