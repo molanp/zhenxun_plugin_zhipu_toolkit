@@ -73,9 +73,9 @@ byd_mode = on_regex(
     block=True,
 )
 
-normal_chat = on_message(rule=is_to_me, priority=998, block=True)
+normal_chat = on_message(rule=is_to_me, priority=999, block=True)
 
-byd_chat = on_message(rule=ensure_group, priority=999, block=False)
+byd_chat = on_message(rule=ensure_group, priority=998, block=False)
 
 clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 
