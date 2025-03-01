@@ -67,7 +67,7 @@ draw_video = on_alconna(
 )
 
 byd_mode = on_regex(
-    r"(启用|禁用)伪人模式\s*(?:/\d+)?",
+    r"(启用|禁用)伪人模式\s*(\d+)?",
     priority=5,
     permission=ADMIN(),
     block=True,
