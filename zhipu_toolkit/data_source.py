@@ -303,9 +303,9 @@ class ChatManager:
         bot = get_bot(self_id=session.self_id)
         my_info = await bot.get_group_member_info(group_id=gid, user_id=session.self_id)
         my_name = my_info["card"] or my_info["nickname"]
-        head = f"你在一个QQ群里，你的QQ是`{session.self_id}`，你的名字是`{my_name}`。请你结合该群的聊天记录作出回应，要求表现得随性一点，需要参与讨论，混入其中。不要过分插科打诨，不要提起无关的话题，你只能以{my_name}的身份对话。不允许包含聊天记录的格式。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n\n"  # noqa: E501
+        head = f"你在一个QQ群里，请你以`{my_name}({session.self_id})`的身份加入聊天，做出一条格式标准的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
         foot = (
-            "\n\n你的回复应该尽可能简练,一次只说一句话，像人类一样随意，不允许有emoji。"
+            "\n```"
         )
         soul = (
             ChatConfig.get("SOUL")
@@ -318,9 +318,7 @@ class ChatManager:
             [
                 {
                     "role": "system",
-                    "content": (
-                        f"你需要遵循以下要求，同时保证回应中不包含聊天记录格式。{soul}"
-                    ),
+                    "content": soul,
                 },
                 {
                     "role": "user",
