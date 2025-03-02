@@ -302,8 +302,8 @@ class ChatManager:
         )
         bot = get_bot(self_id=session.self_id)
         my_info = await bot.get_group_member_info(group_id=gid, user_id=session.self_id)
-        my_name = my_info["card"] or my_info["nickname"]
-        head = f"你在一个QQ群里，请你以`{my_name}({session.self_id})`的身份加入聊天，做出一条符合格式`[{{username}}({{uid}})]:{{message}}`的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
+        my_name = my_info["card"] or my_info
+        head = f"你在一个QQ群里，请你以{session.self_id}的身份加入聊天，做出一条符合格式的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
         foot = (
             "\n```"
         )

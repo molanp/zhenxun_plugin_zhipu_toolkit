@@ -9,6 +9,7 @@ from zhipuai import ZhipuAI
 
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
+from zhenxun.configs.config import BotConfig
 
 from .utils import split_text
 
@@ -25,7 +26,7 @@ from .data_source import (
     cache_group_message,
     check_task_status_periodically,
     hello,
-    submit_task_to_zhipuai,
+    submit_task_to_zhipuai
 )
 from .rule import is_to_me
 
@@ -147,6 +148,15 @@ async def _(msg: UniMsg, session: Session = UniSession()):
             return
         for r, delay in await split_text(result):
             await UniMessage(r).send()
+            await cache_group_message(
+                msg,
+                session,
+                {
+                    "uid": session.self_id,
+                    "nickname": BotConfig.self_nickname,
+                    "msg": r,
+                },
+            )
             await asyncio.sleep(delay)
 
 
