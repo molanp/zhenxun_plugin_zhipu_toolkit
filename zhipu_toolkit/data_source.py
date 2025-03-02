@@ -207,7 +207,7 @@ class ChatManager:
         nickname = await get_user_nickname(session)
         await cls.add_system_message(ChatConfig.get("SOUL"), uid)
         message = await msg2str(msg)
-        words = f"[发送于 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} from `{nickname}`]:{message}"
+        words = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} RECEIVED FROM {nickname}({session.user.id})]:{message}"
         if len(words) > 4095:
             logger.warning(
                 f"USER {uid} NICKNAME {nickname} 问题: {words} ---- 超出最大token限制: 4095",  # noqa: E501
@@ -303,7 +303,7 @@ class ChatManager:
         bot = get_bot(self_id=session.self_id)
         my_info = await bot.get_group_member_info(group_id=gid, user_id=session.self_id)
         my_name = my_info["card"] or my_info["nickname"]
-        head = f"你在一个QQ群里，请你以`{my_name}({session.self_id})`的身份加入聊天，做出一条符合格式`[发送于 YY-mm-dd H:M:S from {{username}}]:{{message}}`的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
+        head = f"你在一个QQ群里，请你以`{my_name}({session.self_id})`的身份加入聊天，做出一条符合格式`[{{username}}({{uid}})]:{{message}}`的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
         foot = (
             "\n```"
         )
