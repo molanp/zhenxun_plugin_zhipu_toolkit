@@ -361,7 +361,7 @@ class ChatManager:
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
         tools = await ToolsManager.get_tools()
-        logger.info(f"可调用工具: {ToolsManager.tools_registry.keys()}")
+        logger.info(f"可调用工具: {ToolsManager.tools_registry.keys()}", "zhipu_toolkit", session=session)
         try:
             response = await loop.run_in_executor(
                 None,
@@ -423,7 +423,7 @@ class ChatManager:
             tool_call = tools[0]
             args = tool_call.function.arguments
             try:
-                logger.info(f"调用函数 {tool_call.function.name}", session=session)
+                logger.info(f"调用函数 {tool_call.function.name}", "zhipu_toolkit", session=session)
                 result = await ToolsManager.call_func(
                     session, tool_call.function.name, args
                 )
