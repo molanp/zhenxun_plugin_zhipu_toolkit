@@ -136,7 +136,7 @@ async def _(bot: Bot, event: Event, session: Session = UniSession()):
 
 @normal_chat.handle()
 async def _(msg: UniMsg, session: Session = UniSession()):
-    if msg.extract_plain_text() == "":
+    if msg.only(Text) and msg.extract_plain_text() == "":
         result = await hello()
         await UniMessage([Text(result[0]), Image(path=result[1])]).finish(reply_to=True)
     if ChatConfig.get("API_KEY") == "":
