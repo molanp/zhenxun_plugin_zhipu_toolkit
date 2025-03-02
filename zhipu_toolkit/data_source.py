@@ -7,7 +7,6 @@ from typing import Any, ClassVar
 import uuid
 
 import aiofiles
-from nonebot import get_bot
 from nonebot_plugin_alconna import Text, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
@@ -300,9 +299,6 @@ class ChatManager:
         content = "".join(
             f"[{msg.nickname}({msg.uid})]:{msg.msg}\n\n" for msg in group_msg
         )
-        bot = get_bot(self_id=session.self_id)
-        my_info = await bot.get_group_member_info(group_id=gid, user_id=session.self_id)
-        my_name = my_info["card"] or my_info
         head = f"你在一个QQ群里，请你以{session.self_id}的身份加入聊天，做出一条符合格式的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
         foot = (
             "\n```"
@@ -345,8 +341,8 @@ class ChatManager:
             msg,
             session,
             {
-                "uid": my_info["user_id"],
-                "nickname": my_name,
+                "uid": session.self_id,
+                "nickname": BotConfig.self_nickname,
                 "msg": result,
             },
         )
