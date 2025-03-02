@@ -9,7 +9,7 @@ class UrlSummaryTool(Tool):
     def __init__(self):
         super().__init__(
             name="url_summary",
-            description="当需要获取url内容的时候可以调用这个函数",
+            description="用于查看链接的内容",
             parameters={
                 "type": "object",
                 "properties": {
