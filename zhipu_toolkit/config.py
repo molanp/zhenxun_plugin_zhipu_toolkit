@@ -20,12 +20,3 @@ plugin_config: PluginConfig = PluginConfig.parse_obj(
 )
 
 nicknames = plugin_config.nickname
-
-
-class GroupMessageModel(BaseModel):
-    uid: str
-    """用户ID"""
-    nickname: str
-    """用户昵称"""
-    msg: str
-    """消息内容"""

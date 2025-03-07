@@ -7,9 +7,9 @@ from nonebot import get_driver, on_message, on_regex, require
 from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
 
+from zhenxun.plugins.zhipu_toolkit.model import ZhipuChatHistory
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
-from zhenxun.configs.config import BotConfig
 
 from .utils import split_text
 
@@ -26,7 +26,7 @@ from .data_source import (
     cache_group_message,
     check_task_status_periodically,
     hello,
-    submit_task_to_zhipuai
+    submit_task_to_zhipuai,
 )
 from .rule import is_to_me
 
@@ -38,21 +38,16 @@ async def handle_connect():
     await ChatManager.initialize()
 
 
-@driver.on_shutdown
-async def handle_disconnect():
-    await ChatManager.save()
-
-
 @scheduler.scheduled_job(
     "interval",
     minutes=5,
 )
 async def save_chat_history():
     try:
-        await ChatManager.save()
-        logger.debug("保存对话数据", "zhipu_toolkit")
+        updated = await ZhipuChatHistory.update_system_content(ChatConfig.get("SOUL"))
+        logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
     except Exception as e:
-        logger.error("保存对话数据", "zhipu_toolkit", e=e)
+        logger.error("同步系统提示词失败", "zhipu_toolkit", e=e)
 
 
 draw_pic = on_alconna(
@@ -74,9 +69,7 @@ byd_mode = on_regex(
     block=True,
 )
 
-normal_chat = on_message(rule=is_to_me, priority=999, block=True)
-
-byd_chat = on_message(rule=ensure_group, priority=998, block=False)
+chat = on_message(priority=999, block=True)
 
 clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 
@@ -135,26 +128,25 @@ async def _(bot: Bot, event: Event, session: Session = UniSession()):
                 )
 
 
-@normal_chat.handle()
-async def _(msg: UniMsg, session: Session = UniSession()):
-    if msg.only(Text) and msg.extract_plain_text() == "":
-        result = await hello()
-        await UniMessage([Text(result[0]), Image(path=result[1])]).finish(reply_to=True)
-    if ChatConfig.get("API_KEY") == "":
-        await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
-    else:
-        result = await ChatManager.normal_chat_result(msg, session)
-        if result is None:
-            return
-        for r, delay in await split_text(result):
-            await UniMessage(r).send()
-            await cache_group_message(r, session)
-            await asyncio.sleep(delay)
-
-
-@byd_chat.handle()
-async def _(msg: UniMsg, session: Session = UniSession()):
-    if await ImpersonationStatus.check(session):
+@chat.handle()
+async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession()):
+    if await is_to_me(event):
+        if msg.only(Text) and msg.extract_plain_text() == "":
+            result = await hello()
+            await UniMessage([Text(result[0]), Image(path=result[1])]).finish(
+                reply_to=True
+            )
+        if ChatConfig.get("API_KEY") == "":
+            await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
+        else:
+            result = await ChatManager.normal_chat_result(msg, session)
+            if result is None:
+                return
+            for r, delay in await split_text(result):
+                await UniMessage(r).send()
+                await cache_group_message(UniMessage(r), session)
+                await asyncio.sleep(delay)
+    elif ensure_group(session) and await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
             return
         await cache_group_message(msg, session)
