@@ -299,7 +299,7 @@ class ChatManager:
         content = "".join(
             f"[{msg.nickname}({msg.uid})]:{msg.msg}\n\n" for msg in group_msg
         )
-        head = f"你在一个QQ群里，请你以{session.self_id}的身份加入聊天，做出一条符合群组聊天记录格式的回应，不允许回应自己的消息，需要参与讨论，混入其中。如果觉得此时不需要自己说话，请只回复`<EMPTY>`。下面是群组的聊天记录：\n```"  # noqa: E501
+        head = f"你在一个QQ群里，请你参与讨论，混入其中。不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n你的身份是`{BotConfig.self_nickname}({session.self_id})`，回应格式与聊天记录格式相同。下面是群组的聊天记录：\n```"  # noqa: E501
         foot = (
             "\n```"
         )
