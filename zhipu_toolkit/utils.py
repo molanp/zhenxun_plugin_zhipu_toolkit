@@ -109,7 +109,7 @@ async def __split_text(text: str, pattern: str, maxsplit: int) -> list[str]:
     return re.split(pattern, text, maxsplit)
 
 
-async def split_text(text: str) -> list[tuple[list, float]]:
+async def split_text(text: str) -> list[tuple[str, float]]:
     """文本切割"""
     results = []
     split_list = [
