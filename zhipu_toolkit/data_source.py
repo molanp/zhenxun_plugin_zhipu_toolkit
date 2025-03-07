@@ -1,10 +1,8 @@
 import asyncio
 import datetime
 import os
-from pathlib import Path
 import random
-import shutil
-from typing import Any, ClassVar
+from typing import Any
 import uuid
 
 import aiofiles
@@ -26,7 +24,14 @@ from zhenxun.utils.rules import ensure_group
 from .config import ChatConfig
 from .model import GroupMessageModel, ZhipuChatHistory
 from .tools import ToolsManager
-from .utils import extract_message_content, get_request_id, get_user_nickname, msg2str
+from .utils import (
+    extract_message_content,
+    get_request_id,
+    get_user_nickname,
+    migrate_user_data,
+    msg2str,
+    remove_directory_with_retry,
+)
 
 GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
 
@@ -155,13 +160,9 @@ async def check_task_status_from_zhipuai(task_id: str):
 
 
 class ChatManager:
-    DATA_FILE_PATH: Path = DATA_PATH / "zhipu_toolkit"
-    impersonation_group: ClassVar[dict] = {}
-
     @classmethod
     async def initialize(cls) -> None:
-        """初始化迁移"""
-        json_path = cls.DATA_FILE_PATH / "chat_history.json"
+        json_path = DATA_PATH / "zhipu_toolkit" / "chat_history.json"
         if not json_path.exists():
             return
 
@@ -171,38 +172,18 @@ class ChatManager:
                 old_data: dict[str, list[dict]] = ujson.loads(await f.read())
 
             for uid, messages in old_data.items():
-                try:
-                    valid_messages = [
-                        msg
-                        for msg in messages
-                        if isinstance(msg, dict) and "role" in msg
-                    ]
-
-                    await ZhipuChatHistory.bulk_create(
-                        [ZhipuChatHistory(uid=uid, **msg) for msg in valid_messages]
-                    )
+                if await migrate_user_data(uid, messages):
                     success += 1
-                except Exception as e:
+                else:
                     failed += 1
-                    logger.error(f"用户 {uid} 迁移失败", "zhipu_toolkit", e=e)
 
-            for retry in range(3):
-                try:
-                    shutil.rmtree(cls.DATA_FILE_PATH)
-                    break
-                except Exception as e:
-                    if retry == 2:
-                        logger.error(
-                            "对话数据文件删除失败，请手动处理", "zhipu_toolkit", e=e
-                        )
-                    await asyncio.sleep(0.5)
-
+            await remove_directory_with_retry(DATA_PATH / "zhipu_toolkit")
         except Exception as e:
-            logger.error("迁移初始化失败", "zhipu_toolkit", e=e)
+            logger.error("对话数据迁移初始化失败", "zhipu_toolkit", e=e)
         finally:
             if success + failed > 0:
                 logger.info(
-                    f"对话数据迁移完成: 成功 {success} 用户, 失败 {failed} 用户",
+                    f"对话数据迁移完成: {success} 个成功, {failed} 个失败",
                     "zhipu_toolkit",
                 )
 

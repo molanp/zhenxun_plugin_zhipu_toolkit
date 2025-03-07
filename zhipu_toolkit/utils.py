@@ -1,5 +1,7 @@
 import asyncio
+from pathlib import Path
 import re
+import shutil
 import uuid
 
 from nonebot_plugin_alconna import At, Image, Text, UniMsg
@@ -7,8 +9,10 @@ from nonebot_plugin_uninfo import Session
 from zhipuai import ZhipuAI
 
 from zhenxun.configs.config import BotConfig
+from zhenxun.services.log import logger
 
 from .config import ChatConfig
+from .model import ZhipuChatHistory
 
 
 async def get_request_id() -> str:
@@ -142,3 +146,35 @@ async def extract_message_content(msg: str) -> str:
     )
     match = pattern.match(msg)
     return match["message"].strip() if match else msg.strip()
+
+
+async def remove_directory_with_retry(
+    path: Path, retries: int = 3, delay: float = 0.5
+) -> None:
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(path)
+            return
+        except Exception as e:
+            if attempt == retries - 1:
+                logger.error(
+                    "Failed to remove directory after multiple attempts",
+                    "zhipu_toolkit",
+                    e=e,
+                )
+            else:
+                await asyncio.sleep(delay)
+
+
+async def migrate_user_data(uid: str, messages: list[dict]) -> bool:
+    try:
+        valid_messages = [
+            msg for msg in messages if isinstance(msg, dict) and "role" in msg
+        ]
+        await ZhipuChatHistory.bulk_create(
+            [ZhipuChatHistory(uid=uid, **msg) for msg in valid_messages]
+        )
+        return True
+    except Exception as e:
+        logger.error(f"UID {uid} 迁移对话数据失败", "zhipu_toolkit", e=e)
+        return False
