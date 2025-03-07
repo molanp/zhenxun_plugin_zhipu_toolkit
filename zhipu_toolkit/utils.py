@@ -138,10 +138,12 @@ async def extract_message_content(msg: str) -> str:
     - str: 提取的实际消息内容。
     """
     pattern = re.compile(
-        rf"^(?:\[(?P<datetime>.*?) RECEIVED FROM (?P<username>.*?)\((?P<uid>\d+)\)\]"
-        rf"|\[(?P<username2>.*?)\((?P<uid2>\d+)\)\]"
-        rf"|\[(?P<datetime_sent>.*?) SENT TO (?P<recipient>.*?)\]"
-        rf"|{BotConfig.self_nickname})\s*[:：](?P<message>.*)$",
+        rf"^(?:"
+        rf"(?:\[.*? RECEIVED FROM .*?\(\d+\)\]|\(.*? RECEIVED FROM .*?\(\d+\)\))"
+        rf"|(?:\[.*?\(\d+\)\]|\(.*?\(\d+\)\))"
+        rf"|(?:\[.*? SENT TO .*?\]|\(.*? SENT TO .*?\))"
+        rf"|{re.escape(BotConfig.self_nickname)})"
+        rf"\s*[:：](?P<message>.*)$",
         re.DOTALL,
     )
     match = pattern.match(msg)
