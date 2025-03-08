@@ -193,9 +193,8 @@ class ChatManager:
             case "user":
                 uid = session.user.id
             case "group":
-                uid = "g-" + (
-                    session.scene.id if ensure_group(session) else session.user.id
-                )
+                uid = "g-" + session.scene.id if ensure_group(session) else session.user.id
+                
             case "all":
                 uid = "mix_mode"
             case _:
