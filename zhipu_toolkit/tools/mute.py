@@ -11,7 +11,7 @@ class MuteTool(Tool):
     def __init__(self):
         super().__init__(
             name="mute",
-            description="禁言对话者或指定的用户uid",
+            description="禁言对话者或指定的用户uin",
             parameters={
                 "type": "object",
                 "properties": {
