@@ -316,7 +316,7 @@ class ChatManager:
             f"[{msg.time} RECEIVED FROM {msg.nickname}({msg.uid})]:{msg.msg}\n\n"
             for msg in group_msg
         )
-        head = f"你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}({session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n___\n**回复格式为`[<username>(<uid>)]:<>`**\n## 请严格遵守回复的格式\n下面是群组的聊天记录：\n```"  # noqa: E501
+        head = f"你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}({session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n___\n**回复格式为`[username(uin)]:message`**\n## 请严格遵守回复的格式\n下面是群组的聊天记录：\n```"  # noqa: E501
         foot = "\n```"
         soul = (
             ChatConfig.get("SOUL")

@@ -15,7 +15,7 @@ class MuteTool(Tool):
             parameters={
                 "type": "object",
                 "properties": {
-                    "uid": {
+                    "uin": {
                         "type": "integer",
                         "description": "需要禁言的对象，为空则禁言对话者",
                     },
@@ -29,12 +29,12 @@ class MuteTool(Tool):
             func=self.Mute,
         )
 
-    async def Mute(self, session, uid: int | None = None, minute: int | None = None) -> str:
+    async def Mute(self, session, uin: int | None = None, minute: int | None = None) -> str:
         if not ensure_group(session):
             return "不是群组环境，不能禁言"
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
-        uid = uid or session.user.id
+        uid = uin or session.user.id
         try:
             member_info = await bot.get_group_member_info(
                 group_id=gid, user_id=bot.self_id
