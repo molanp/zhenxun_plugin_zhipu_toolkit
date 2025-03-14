@@ -142,6 +142,7 @@ async def extract_message_content(msg: str) -> str:
         rf"(?:\[.*? RECEIVED FROM .*?\(\d+\)\]|\(.*? RECEIVED FROM .*?\(\d+\)\))"
         rf"|(?:\[.*?\(\d+\)\]|\(.*?\(\d+\)\))"
         rf"|(?:\[.*? SENT TO .*?\]|\(.*? SENT TO .*?\))"
+        rf"|{re.escape(BotConfig.nickname)}\(\d+\)"
         rf"|{re.escape(BotConfig.self_nickname)})"
         rf"\s*[:：](?P<message>.*)$",
         re.DOTALL,
