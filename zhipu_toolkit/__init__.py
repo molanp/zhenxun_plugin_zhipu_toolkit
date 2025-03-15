@@ -6,6 +6,7 @@ from zhenxun.configs.utils import PluginExtraData, RegisterConfig
 from .handler import (
     chat,  # noqa: F401
     clear_all_chat,  # noqa: F401
+    clear_chat,  # noqa: F401
     clear_group_chat,  # noqa: F401
     clear_my_chat,  # noqa: F401
     draw_pic,  # noqa: F401
@@ -21,6 +22,7 @@ __plugin_meta__ = PluginMetadata(
         生成图片 <prompt>
         生成视频 <prompt>
         清理我的会话:   用于清理你与AI的聊天记录
+        清理会话 @user / uid : 用于清理指定用户的会话记录,支持多个目标
         清理群会话: (仅管理员)用于清理本群的大杂烩记录，仅当分组模式为group时生效
         启用/禁用伪人模式: (仅管理员)开启或关闭当前群聊的伪人模式
     或者与机器人聊天，{BotConfig.self_nickname}是可以看懂大家的表情包和链接的...
@@ -30,7 +32,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="0.9",
+        version="1.0",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -86,7 +88,7 @@ __plugin_meta__ = PluginMetadata(
 核心原则：
 ღ 用户温柔双倍返还更活泼的温柔！
 ღ 生气时像炸毛奶猫「喵、喵呜！」等类似的话
-ღ 关心人时会用元气满满的语气说「要、要好好吃饭哦!  不然会长不高高哒！」等类似的话""",
+ღ 关心人时会用元气满满的语气说「要、要好好吃饭哦!  不然会长不高高哒！」等类似的话""",  # noqa: E501
                 help="AI的自定义人格",
                 default_value="",
             ),

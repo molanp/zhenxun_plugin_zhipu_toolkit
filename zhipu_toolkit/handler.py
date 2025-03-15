@@ -16,7 +16,16 @@ from .utils import split_text
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
-from nonebot_plugin_alconna import Image, Match, Text, UniMessage, UniMsg, on_alconna
+from nonebot_plugin_alconna import (
+    Arparma,
+    At,
+    Image,
+    Match,
+    Text,
+    UniMessage,
+    UniMsg,
+    on_alconna,
+)
 from nonebot_plugin_uninfo import ADMIN, Session, UniSession
 
 from .config import ChatConfig
@@ -80,7 +89,14 @@ clear_all_chat = on_alconna(
 clear_group_chat = on_alconna(
     Alconna("清理群会话"),
     rule=ensure_group,
-    permission=ADMIN(),
+    permission=ADMIN() | SUPERUSER,
+    priority=5,
+    block=True,
+)
+
+clear_chat = on_alconna(
+    Alconna("清理会话", Args["target", AllParam], meta=CommandMeta(compact=True)),
+    permission=ADMIN() | SUPERUSER,
     priority=5,
     block=True,
 )
@@ -224,3 +240,25 @@ async def submit_task(msg: str):
                 await draw_video.send(
                     Text(f"任务提交失败，e:{response}"), reply_to=True
                 )
+
+
+@clear_chat.handle()
+async def _(param: Arparma):
+    targets = []
+    for p in param.query("target"): # type: ignore
+        if isinstance(p, At):
+            targets.append(str(p.target))
+        elif isinstance(p, Text):
+            if stripped := p.text.strip():
+                targets.append(stripped)
+
+    counts = {}
+    tasks = [ChatManager.clear_history(t) for t in targets]
+    for t, task in zip(targets, asyncio.as_completed(tasks)):
+        counts[t] = await task
+
+    result = [Text(f"• {t}: {count} 条数据\n") for t, count in counts.items()]
+    summary = Text(f"已清理 {len(targets)} 个目标的聊天记录：\n")
+    messages = [summary, *result]
+
+    await clear_chat.send(UniMessage(messages), reply_to=True)
