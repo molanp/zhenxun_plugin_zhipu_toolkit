@@ -75,7 +75,7 @@ class ZhipuChatHistory(Model):
             }]
         ```
         """
-        records = await cls.filter(uid=uid).order_by("-id").all()
+        records = await cls.filter(uid=uid).order_by("id").all()
         return [
             {
                 "role": record.role,
