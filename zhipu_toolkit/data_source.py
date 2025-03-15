@@ -208,7 +208,7 @@ class ChatManager:
         message = await msg2str(msg)
         words = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} "
-            f"RECEIVED FROM {nickname}({session.user.id})]:{message}"
+            f"NICKNAME {nickname} UID {session.user.id}]:{message}"
         )
         if len(words) > 4095:
             logger.warning(
@@ -318,10 +318,10 @@ class ChatManager:
             return
 
         content = "".join(
-            f"[{msg.time} RECEIVED FROM {msg.nickname}({msg.uid})]:{msg.msg}\n\n"
+            f"[{msg.time} NICKNAME {msg.nickname} UID {msg.uid}]:{msg.msg}\n\n"
             for msg in group_msg
         )
-        head = f"当前时间为{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}({session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n*** 回复格式为`[username(uin)]:message`***\n下面是群组的聊天记录：\n***"  # noqa: E501
+        head = f"当前时间为{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n**\n你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}({session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n*** 回复格式为`[username(uin)]:message`***\n下面是群组的聊天记录：\n***"  # noqa: E501
         foot = "\n***"
         soul = (
             ChatConfig.get("SOUL")

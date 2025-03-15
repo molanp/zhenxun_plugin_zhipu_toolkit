@@ -29,7 +29,7 @@ async def msg2str(msg: UniMsg) -> str:
     message = ""
     for segment in msg:
         if isinstance(segment, At):
-            message += f"@{segment.target} "
+            message += f"@[uid={segment.target}] "
         elif isinstance(segment, Image):
             assert segment.url is not None
             url = segment.url.replace(
@@ -52,7 +52,7 @@ async def str2msg(message: str) -> list:
     """
     segments = []
     message = message.removesuffix("。")
-    at_pattern = r"@(\d+)"
+    at_pattern = r"@\[uid=([^]]+)\]"
     last_pos = 0
 
     for match in re.finditer(at_pattern, message, re.DOTALL):
@@ -138,13 +138,11 @@ async def extract_message_content(msg: str) -> str:
     - str: 提取的实际消息内容。
     """
     pattern = re.compile(
-        rf"^(?:"
-        rf"(?:\[.*? RECEIVED FROM .*?\(\d+\)\]|\(.*? RECEIVED FROM .*?\(\d+\)\))"
-        rf"|(?:\[.*?\(\d+\)\]|\(.*?\(\d+\)\))"
-        rf"|(?:\[.*? SENT TO .*?\]|\(.*? SENT TO .*?\))"
-        rf"|{re.escape(BotConfig.self_nickname)}\(\d+\)"
-        rf"|{re.escape(BotConfig.self_nickname)})"
-        rf"\s*[:：](?P<message>.*)$",
+        rf"^(?:"  # 非捕获组开始
+        rf"\[[^]]*NICKNAME .*? UID \S+\]|"  # [2023-10-05 NICKNAME Alice UID 123]
+        rf"{re.escape(BotConfig.self_nickname)}\s*\([^)]*\)|"  # BotName(UID: 123)
+        rf"{re.escape(BotConfig.self_nickname)}"  # BotName
+        rf")\s*[:：](?P<message>.*)$",  # 匹配冒号后内容
         re.DOTALL,
     )
     match = pattern.match(msg)

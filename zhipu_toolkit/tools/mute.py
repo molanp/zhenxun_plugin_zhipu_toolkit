@@ -2,6 +2,7 @@ import random
 
 from nonebot import get_bot
 
+from zhenxun.utils.platform import PlatformUtils
 from zhenxun.utils.rules import ensure_group
 
 from ._model import Tool
@@ -11,12 +12,12 @@ class MuteTool(Tool):
     def __init__(self):
         super().__init__(
             name="mute",
-            description="禁言对话者或指定的用户uin",
+            description="用于禁言用户",
             parameters={
                 "type": "object",
                 "properties": {
-                    "uin": {
-                        "type": "integer",
+                    "uid": {
+                        "type": "string",
                         "description": "需要禁言的对象，为空则禁言对话者",
                     },
                     "minute": {
@@ -30,39 +31,48 @@ class MuteTool(Tool):
         )
 
     async def Mute(
-        self, session, uin: int | None = None, minute: int | None = None
+        self, session, uid: str | None = None, minute: int | None = None
     ) -> str:
         if not ensure_group(session):
             return "不是群组环境，不能禁言"
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
-        uid = uin or session.user.id
-        try:
-            member_info = await bot.get_group_member_info(
-                group_id=gid, user_id=bot.self_id
-            )
-            bot_role = member_info["role"]
-        except Exception:
-            return "获取成员信息失败"
-
-        try:
-            sender_info = await bot.get_group_member_info(group_id=gid, user_id=uid)
-            sender_role = sender_info["role"]
-        except Exception:
-            return "获取成员信息失败"
-
-        if bot_role not in ["admin", "owner"]:
-            return "不是管理员，不能禁言"
-        if bot_role == "admin" and sender_role in ["owner", "admin"]:
-            return "不能禁言对方"
+        uid = str(uid or session.user.id)
 
         mute_time = minute or random.randint(1, 100)
         try:
-            await bot.set_group_ban(
-                group_id=gid,
-                user_id=uid,
-                duration=mute_time * 60,
-            )
-            return f"已禁言 {uid} {mute_time} 分钟"
-        except Exception:
-            return "禁言失败"
+            await PlatformUtils.ban_user(bot, uid, gid, mute_time)
+            return f"禁言成功, 禁言时长: {mute_time}分钟"
+        except Exception as e:
+            return f"禁言失败, 原因: {e!s}"
+
+
+class UnMuteTool(Tool):
+    def __init__(self):
+        super().__init__(
+            name="unmute",
+            description="取消禁言对话者或指定的用户uin",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "uid": {
+                        "type": "string",
+                        "description": "需要取消禁言的对象，为空则取消禁言对话者",
+                    }
+                },
+                "required": [],
+            },
+            func=self.UnMute,
+        )
+
+    async def UnMute(self, session, uid: str | None = None) -> str:
+        if not ensure_group(session):
+            return "不是群组环境，不能取消禁言"
+        bot = get_bot(self_id=session.self_id)
+        gid = session.scene.id
+        uid = str(uid or session.user.id)
+        try:
+            await PlatformUtils.ban_user(bot, uid, gid, 0)
+            return "取消禁言成功"
+        except Exception as e:
+            return f"取消禁言失败, 原因: {e!s}"

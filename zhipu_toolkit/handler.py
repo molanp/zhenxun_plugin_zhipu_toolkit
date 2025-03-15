@@ -246,7 +246,7 @@ async def submit_task(msg: str):
 async def _(param: Arparma):
     targets = [
         str(p.target) if isinstance(p, At) else p.text.strip()
-        for p in param.query("target")
+        for p in param.query("target") # type: ignore
         if (isinstance(p, At) or (isinstance(p, Text) and p.text.strip()))
     ]
 
