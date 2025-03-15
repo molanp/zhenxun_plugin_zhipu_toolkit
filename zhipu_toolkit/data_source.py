@@ -193,8 +193,12 @@ class ChatManager:
             case "user":
                 uid = session.user.id
             case "group":
-                uid = "g-" + session.scene.id if ensure_group(session) else session.user.id
-                
+                uid = (
+                    f"g-{session.scene.id}"
+                    if ensure_group(session)
+                    else session.user.id
+                )
+
             case "all":
                 uid = "mix_mode"
             case _:
@@ -240,6 +244,7 @@ class ChatManager:
                 ChatConfig.get("CHAT_MODEL"),
                 await cls.get_chat_history(uid),
                 session,
+                temperature=0.5
             )
             result = await extract_message_content(result[0])
             logger.info(
@@ -316,8 +321,8 @@ class ChatManager:
             f"[{msg.time} RECEIVED FROM {msg.nickname}({msg.uid})]:{msg.msg}\n\n"
             for msg in group_msg
         )
-        head = f"你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}({session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n___\n**回复格式为`[username(uin)]:message`**\n## 请严格遵守回复的格式\n下面是群组的聊天记录：\n```"  # noqa: E501
-        foot = "\n```"
+        head = f"你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}({session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n*** 回复格式为`[username(uin)]:message`***\n下面是群组的聊天记录：\n***"  # noqa: E501
+        foot = "\n***"
         soul = (
             ChatConfig.get("SOUL")
             if ChatConfig.get("IMPERSONATION_SOUL") is False
@@ -371,6 +376,7 @@ class ChatManager:
         messages: list,
         session: Session,
         impersonation: bool = False,
+        temperature: float = 0.95,
     ) -> tuple[str, int, CompletionMessage | None]:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -390,6 +396,7 @@ class ChatManager:
                     user_id=uid,
                     request_id=request_id,
                     tools=tools,
+                    temperature=temperature,
                 ),
             )
         except Exception as e:

@@ -29,7 +29,9 @@ class MuteTool(Tool):
             func=self.Mute,
         )
 
-    async def Mute(self, session, uin: int | None = None, minute: int | None = None) -> str:
+    async def Mute(
+        self, session, uin: int | None = None, minute: int | None = None
+    ) -> str:
         if not ensure_group(session):
             return "不是群组环境，不能禁言"
         bot = get_bot(self_id=session.self_id)
