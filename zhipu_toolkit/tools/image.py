@@ -2,7 +2,7 @@ from nonebot_plugin_alconna import Image, Target, UniMessage
 from ._model import Tool
 
 
-class MuteTool(Tool):
+class ImageTool(Tool):
     def __init__(self):
         super().__init__(
             name="send_image",

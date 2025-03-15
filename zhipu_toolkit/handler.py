@@ -244,18 +244,15 @@ async def submit_task(msg: str):
 
 @clear_chat.handle()
 async def _(param: Arparma):
-    targets = []
-    for p in param.query("target"): # type: ignore
-        if isinstance(p, At):
-            targets.append(str(p.target))
-        elif isinstance(p, Text):
-            if stripped := p.text.strip():
-                targets.append(stripped)
+    targets = [
+        str(p.target) if isinstance(p, At) else p.text.strip()
+        for p in param.query("target")
+        if (isinstance(p, At) or (isinstance(p, Text) and p.text.strip()))
+    ]
 
-    counts = {}
     tasks = [ChatManager.clear_history(t) for t in targets]
-    for t, task in zip(targets, asyncio.as_completed(tasks)):
-        counts[t] = await task
+    results = await asyncio.gather(*tasks)
+    counts = dict(zip(targets, results))
 
     result = [Text(f"• {t}: {count} 条数据\n") for t, count in counts.items()]
     summary = Text(f"已清理 {len(targets)} 个目标的聊天记录：\n")
