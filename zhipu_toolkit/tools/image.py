@@ -6,13 +6,13 @@ class ImageTool(Tool):
     def __init__(self):
         super().__init__(
             name="send_image",
-            description="发送图片到聊天",
+            description="用于向用户发送一张网络图片",
             parameters={
                 "type": "object",
                 "properties": {
                     "url": {
                         "type": "string",
-                        "description": "需要发送的图片网络url",
+                        "description": "图片url",
                     },
                 },
                 "required": ["url"],
