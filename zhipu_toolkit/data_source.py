@@ -25,6 +25,7 @@ from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
     format_usr_msg,
+    get_answer,
     get_request_id,
     get_user_nickname,
     migrate_user_data,
@@ -442,7 +443,7 @@ class ChatManager:
             else:
                 return ZhipuResult(content=error, error_code=2)
         return ZhipuResult(
-            content=response.choices[0].message.content,  # type: ignore
+            content=await get_answer(response.choices[0].message.content),  # type: ignore
             error_code=0,
             message=response.choices[0].message,  # type: ignore
         )
