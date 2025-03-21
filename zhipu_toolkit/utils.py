@@ -11,6 +11,7 @@ import ujson
 from zhipuai import ZhipuAI
 
 from zhenxun.services.log import logger
+from zhenxun.configs.config import BotConfig
 
 from .config import ChatConfig
 from .model import ZhipuChatHistory
@@ -171,11 +172,31 @@ async def format_usr_msg(nickname: str, session: Uninfo, msg: str) -> str:
     return ujson.dumps(data, ensure_ascii=False)
 
 
+async def extract_message_content(msg: str) -> str:
+    """
+    从格式化的消息中提取实际的消息内容。
+    参数:
+    - msg (str): 格式化的消息字符串。
+    返回:
+    - str: 提取的实际消息内容。
+    """
+    pattern = re.compile(
+        rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
+        rf"(?:\(\S+\))?"  # 匹配括号内的非空白内容
+        rf"[:：]\s*"  # 匹配冒号及空格
+        rf"(?P<message>.*)$",  # 捕获消息内容
+        re.DOTALL,
+    )
+    match = pattern.match(msg)
+    return match["message"].strip() if match else msg.strip()
+
+
 async def get_answer(answer: str | None) -> str | None:
     if answer is None:
         return None
     try:
         data = ujson.loads(str(answer).strip())["answer"]
-    except ujson.JSONDecodeError:
+    except (ujson.JSONDecodeError, KeyError):
         data = str(answer).strip()
-    return data.replace("\\n", "\n")
+    data = data.replace("\\n", "\n").replace("\\t", "\t")
+    return await extract_message_content(data)
