@@ -182,7 +182,7 @@ async def extract_message_content(msg: str) -> str:
     """
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
-        rf"(?:\(\S+\))?"  # 匹配括号内的非空白内容
+        rf"(?:\([^)]+\))?"  # 修改：匹配括号内的任意内容（直到右括号）
         rf"[:：]\s*"  # 匹配冒号及空格
         rf"(?P<message>.*)$",  # 捕获消息内容
         re.DOTALL,
