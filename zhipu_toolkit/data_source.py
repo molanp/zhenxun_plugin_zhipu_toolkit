@@ -3,7 +3,6 @@ import datetime
 import os
 import random
 from typing import Any
-import uuid
 
 import aiofiles
 from nonebot_plugin_alconna import Text, UniMsg, Video
@@ -22,11 +21,10 @@ from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
 from .config import ChatConfig
-from .model import GroupMessageModel, ZhipuChatHistory
+from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
     format_usr_msg,
-    get_answer,
     get_request_id,
     get_user_nickname,
     migrate_user_data,
@@ -223,23 +221,23 @@ class ChatManager:
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
         )
-        if result[1] == 1:
+        if result.error_code == 1:
             logger.info(
                 f"NICKNAME `{nickname}` 问题: {message} ---- 触发内容审查",
                 "zhipu_toolkit",
                 session=session,
             )
-            return result[0]
-        if result[1] == 2:
+            return result.content
+        if result.error_code == 2:
             logger.error(
-                f"获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session
+                f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
-            return f"出错了: {result[0]}"
-        assert result[2] is not None, (
-            "result[2] should not be None if result[1] is not 1 or 2"
+            return f"出错了: {result.content}"
+        assert result.message is not None
+        await cls.add_anytype_message(uid, result.message)
+        tool_result = await cls.parse_function_call(
+            uid, session, result.message.tool_calls
         )
-        await cls.add_anytype_message(uid, result[2])
-        tool_result = await cls.parse_function_call(uid, session, result[2].tool_calls)
         if tool_result is not None:
             result = await cls.get_zhipu_result(
                 uid,
@@ -249,18 +247,18 @@ class ChatManager:
                 temperature=0.5,
             )
             logger.info(
-                f"NICKNAME `{nickname}` 问题：{message} ---- 回答：{result[0]}",
+                f"NICKNAME `{nickname}` 问题：{message} ---- 回答：{result.content}",
                 "zhipu_toolkit",
                 session=session,
             )
-            return result[0]
-        if result[0] is not None:
+            return result.content
+        if result.content is not None:
             logger.info(
-                f"NICKNAME `{nickname}` 问题：{message} ---- 回答：{result[0]}",
+                f"NICKNAME `{nickname}` 问题：{message} ---- 回答：{result.content}",
                 "zhipu_toolkit",
                 session=session,
             )
-            return result[0]
+            return result.content
 
     @classmethod
     async def add_user_message(cls, content: str, uid: str) -> None:
@@ -329,7 +327,7 @@ class ChatManager:
             else ChatConfig.get("IMPERSONATION_SOUL")
         )
         result = await cls.get_zhipu_result(
-            str(uuid.uuid4()),
+            await get_request_id(),
             ChatConfig.get("IMPERSONATION_MODEL"),
             [
                 {
@@ -344,15 +342,15 @@ class ChatManager:
             session,
             True,
         )
-        if result[1] == 1:
+        if result.error_code == 1:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
             return
-        if result[1] == 2:
+        if result.error_code == 2:
             logger.error(
-                f"伪人获取结果失败 e:{result[0]}", "zhipu_toolkit", session=session
+                f"伪人获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
             return
-        if "<EMPTY>" in result[0]:
+        if result.content is not None and "<EMPTY>" in result.content:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
         logger.info(f"伪人回复: {result}", "zhipu_toolkit", session=session)
@@ -362,10 +360,10 @@ class ChatManager:
             {
                 "uid": session.self_id,
                 "nickname": BotConfig.self_nickname,
-                "msg": result[0],
+                "msg": result.content,
             },
         )
-        return result[0]
+        return result.content
 
     @classmethod
     async def get_zhipu_result(
@@ -376,7 +374,7 @@ class ChatManager:
         session: Session,
         impersonation: bool = False,
         temperature: float = 0.95,
-    ) -> tuple[str, int, CompletionMessage | None]:
+    ) -> ZhipuResult:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
@@ -425,7 +423,10 @@ class ChatManager:
                         300,
                     )
 
-                return "输入内容包含不安全或敏感内容，你已被封禁5分钟", 1, None
+                return ZhipuResult(
+                    content="输入内容包含不安全或敏感内容，你已被封禁5分钟",
+                    error_code=1,
+                )
             elif "history" in error:
                 logger.warning(
                     f"UID {uid} 对话历史记录触发内容审查: 清理历史记录",
@@ -433,13 +434,15 @@ class ChatManager:
                     session=session,
                 )
                 await cls.clear_history(uid)
-                return "历史记录包含违规内已被清除，请重新开始对话", 1, None
+                return ZhipuResult(
+                    content="历史记录包含违规内已被清除，请重新开始对话", error_code=1
+                )
             else:
-                return error, 2, None
-        return (
-            await get_answer(response.choices[0].message.content), # type: ignore
-            0,
-            response.choices[0].message, # type: ignore
+                return ZhipuResult(content=error, error_code=2)
+        return ZhipuResult(
+            content=response.choices[0].message.content,  # type: ignore
+            error_code=0,
+            message=response.choices[0].message,  # type: ignore
         )
 
     @classmethod
