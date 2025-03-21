@@ -27,7 +27,7 @@
 ![image](https://github.com/user-attachments/assets/949de9e7-07c8-4451-9d22-a0fd3d5190a9)
 
 ## 📚 插件依赖
-如果插件报错了没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令
+如果插件报错没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令
 ```shell
 poetry add zhipuai
 ```
