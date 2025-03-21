@@ -6,23 +6,28 @@ from ._model import Tool
 
 
 class SetNameTool(Tool):
+    """在群组中设置用户昵称的工具（需管理员权限）"""
+
     def __init__(self):
         super().__init__(
             name="set_user_nickname",
-            description="设置指定用户的群昵称",
+            description=(
+                "在群组中设置指定用户的群昵称，需提供用户UID和新昵称，"
+                "返回操作结果（成功/失败原因）。"
+            ),
             parameters={
                 "type": "object",
                 "properties": {
                     "uid": {
                         "type": "string",
-                        "description": "用户uid",
+                        "description": "目标用户的唯一标识符（UID）",
                     },
                     "name": {
                         "type": "string",
-                        "description": "用户群昵称",
+                        "description": "新群昵称（限16字内，支持中文/英文）",
                     },
                 },
-                "required": ["uin", "name"],
+                "required": ["uid", "name"],
             },
             func=self.SetName,
         )

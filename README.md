@@ -26,6 +26,12 @@
 **温馨提示:** 把鼠标移至TOKEN上，会出现复制按钮，点击即可
 ![image](https://github.com/user-attachments/assets/949de9e7-07c8-4451-9d22-a0fd3d5190a9)
 
+## 📚 插件依赖
+如果插件报错了没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令
+```shell
+poetry add zhipuai
+```
+
 ## ✨ 功能
 - [x] AI文生图
 - [x] AI文生视频
@@ -76,12 +82,6 @@
 | `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
 | `IMPERSONATION_SOUL` | **否** | `False` | 伪人模式的自定义人格,为`False`则同步`SOUL` |
 | `IMPERSONATION_BAN_GROUP` | **否** | `[]` | 禁用伪人模式的群组列表 |
-
-## 📚 插件依赖
-如果插件报错了没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令
-```shell
-poetry add zhipuai
-```
 
 ## ⁉️ Q&A
 - **Q:** 什么是伪人模式

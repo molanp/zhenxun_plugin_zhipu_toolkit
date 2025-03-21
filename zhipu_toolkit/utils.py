@@ -1,14 +1,15 @@
 import asyncio
+import datetime
 from pathlib import Path
 import re
 import shutil
 import uuid
 
 from nonebot_plugin_alconna import At, Image, Text, UniMsg
-from nonebot_plugin_uninfo import Session
+from nonebot_plugin_uninfo import Session, Uninfo
+import ujson
 from zhipuai import ZhipuAI
 
-from zhenxun.configs.config import BotConfig
 from zhenxun.services.log import logger
 
 from .config import ChatConfig
@@ -52,13 +53,13 @@ async def str2msg(message: str) -> list:
     """
     segments = []
     message = message.removesuffix("。")
-    at_pattern = r"@\[uid=([^]]+)\]"
+    at_pattern = r"@UID ([^ ]+)|@<uid=([^>]+)>"
     last_pos = 0
 
     for match in re.finditer(at_pattern, message, re.DOTALL):
         if match.start() > last_pos:
             segments.append(Text(message[last_pos : match.start()]))
-        uid = match.group(1)
+        uid = match.group(1) or match.group(2)
         segments.append(At("user", uid))
         last_pos = match.end()
     if last_pos < len(message):
@@ -127,28 +128,6 @@ async def split_text(text: str) -> list[tuple[str, float]]:
     return results
 
 
-async def extract_message_content(msg: str) -> str:
-    """
-    从格式化的消息中提取实际的消息内容。
-
-    参数:
-    - msg (str): 格式化的消息字符串。
-
-    返回:
-    - str: 提取的实际消息内容。
-    """
-    pattern = re.compile(
-        rf"^(?:"  # 非捕获组开始
-        rf"\[[^]]*NICKNAME .*? UID \S+\]|"  # [2023-10-05 NICKNAME Alice UID 123]
-        rf"{re.escape(BotConfig.self_nickname)}\s*\([^)]*\)|"  # BotName(UID: 123)
-        rf"{re.escape(BotConfig.self_nickname)}"  # BotName
-        rf")\s*[:：](?P<message>.*)$",  # 匹配冒号后内容
-        re.DOTALL,
-    )
-    match = pattern.match(msg)
-    return match["message"].strip() if match else msg.strip()
-
-
 async def remove_directory_with_retry(
     path: Path, retries: int = 3, delay: float = 0.5
 ) -> None:
@@ -179,3 +158,24 @@ async def migrate_user_data(uid: str, messages: list[dict]) -> bool:
     except Exception as e:
         logger.error(f"UID {uid} 迁移对话数据失败", "zhipu_toolkit", e=e)
         return False
+
+
+async def format_usr_msg(nickname: str, session: Uninfo, msg: str) -> str:
+    """\n"""
+    data = {
+        "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "nickname": nickname,
+        "uid": session.user.id,
+        "message": msg,
+    }
+    return ujson.dumps(data, ensure_ascii=False)
+
+
+async def get_answer(answer: str | None) -> str | None:
+    if answer is None:
+        return None
+    try:
+        data = ujson.loads(str(answer).strip())["answer"]
+    except ujson.JSONDecodeError:
+        data = str(answer).strip()
+    return data.replace("\\n", "\n")
