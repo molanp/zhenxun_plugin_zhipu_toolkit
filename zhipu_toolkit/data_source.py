@@ -233,7 +233,9 @@ class ChatManager:
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
             return f"出错了: {result.content}"
-        assert result.message is not None
+        if result.message is None:
+            logger.error(f"Missing result.message for uid: {uid}, returning error. Result content: {result.content}")
+            return f"出错了: {result.content}"
         await cls.add_anytype_message(uid, result.message)
         tool_result = await cls.parse_function_call(
             uid, session, result.message.tool_calls
