@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from tortoise import fields
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
+from zhipuai.types.chat.chat_completion import CompletionMessage
 
 from zhenxun.services.db_context import Model
 
@@ -17,6 +18,12 @@ class GroupMessageModel(BaseModel):
     """消息内容"""
     time: str
     """消息时间"""
+
+
+class ZhipuResult(BaseModel):
+    content: str | None = None
+    error_code: int
+    message: CompletionMessage | None = None
 
 
 class RoleValidator(Validator):
@@ -88,9 +95,7 @@ class ZhipuChatHistory(Model):
         ]
 
     @classmethod
-    async def update_system_content(
-        cls, content: str, uid: str | None = None
-    ) -> int:
+    async def update_system_content(cls, content: str, uid: str | None = None) -> int:
         query = cls.filter(role="system")
         if uid:
             query = query.filter(uid=uid)

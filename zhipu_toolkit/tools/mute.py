@@ -9,20 +9,25 @@ from ._model import Tool
 
 
 class MuteTool(Tool):
+    """禁言用户的工具（支持随机时长）"""
+
     def __init__(self):
         super().__init__(
             name="mute",
-            description="用于禁言用户",
+            description=(
+                "禁言指定用户或对话者，支持自定义禁言时长（分钟）或随机1-100分钟，"
+                "返回操作结果（成功/失败原因）。"
+            ),
             parameters={
                 "type": "object",
                 "properties": {
                     "uid": {
                         "type": "string",
-                        "description": "需要禁言的对象，为空则禁言对话者",
+                        "description": "目标用户UID，留空则禁言指令发起者",
                     },
                     "minute": {
                         "type": "integer",
-                        "description": "禁言时长，单位为分钟，默认为随机",
+                        "description": "禁言时长（分钟），不填则随机1-100分钟",
                     },
                 },
                 "required": [],
@@ -48,17 +53,19 @@ class MuteTool(Tool):
 
 
 class UnMuteTool(Tool):
+    """取消用户禁言的工具"""
+
     def __init__(self):
         super().__init__(
             name="unmute",
-            description="取消禁言对话者或指定的用户uin",
+            description="取消指定用户或对话者的禁言状态，返回操作结果（成功/失败原因）。",
             parameters={
                 "type": "object",
                 "properties": {
                     "uid": {
                         "type": "string",
-                        "description": "需要取消禁言的对象，为空则取消禁言对话者",
-                    }
+                        "description": "目标用户UID，留空则取消指令发起者的禁言",
+                    },
                 },
                 "required": [],
             },

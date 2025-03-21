@@ -42,14 +42,27 @@ class ToolsManager:
         tool = cls.tools_registry.get(name)
         if tool is None:
             raise ValueError(f"Tool '{name}' not found in the registry.")
-        if tool.func is None:
-            raise ValueError(f"Tool '{name}' has no function defined.")
-        if not callable(tool.func):
-            raise ValueError(f"Tool '{name}' function is not callable.")
+        if tool.func is None or not callable(tool.func):
+            raise ValueError(f"Tool '{name}' has no valid function.")
+
+        func = tool.func
+        sig = inspect.signature(func)
+        parameters = sig.parameters
+
+        has_session = "session" in parameters
         try:
-            return await tool.func(session, **ujson.loads(args))
+            kwargs = ujson.loads(args)
         except Exception as e:
-            logging.error(f"Error calling function for tool '{name}': {e}")
+            raise ValueError(f"Invalid arguments format: {e}") from e
+
+        call_args = {"session": session, **kwargs} if has_session else kwargs
+        try:
+            return await func(**call_args)
+        except TypeError as e:
+            logging.error(f"参数类型错误: {e}")
+            raise
+        except Exception as e:
+            logging.error(f"调用工具 {name} 失败: {e}")
             raise
 
     @classmethod
