@@ -37,7 +37,7 @@ async def msg2str(msg: UniMsg) -> str:
             url = segment.url.replace(
                 "https://multimedia.nt.qq.com.cn", "http://multimedia.nt.qq.com.cn"
             )
-            message += f"\n![{await generate_image_description(url)}]\n({url})"
+            message += f"\n![{await generate_image_description(url)}]({url})"
         elif isinstance(segment, Text):
             message += segment.text
     return message
