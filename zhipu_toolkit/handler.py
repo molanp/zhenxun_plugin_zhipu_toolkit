@@ -147,7 +147,7 @@ async def _(bot: Bot, event: Event, session: Session = UniSession()):
 @chat.handle()
 async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession()):
     if await is_to_me(event):
-        if msg.only(Text) and msg.extract_plain_text() == "":
+        if msg.only(Text) and msg.extract_plain_text().strip() == "":
             result = await hello()
             await UniMessage([Text(result[0]), Image(path=result[1])]).finish(
                 reply_to=True
