@@ -438,7 +438,7 @@ class ChatManager:
                 )
                 await cls.clear_history(uid)
                 return ZhipuResult(
-                    content="历史记录包含违规内已被清除，请重新开始对话", error_code=1
+                    content="对话记录包含违规内容已被清除，请重新开始对话", error_code=1
                 )
             else:
                 return ZhipuResult(content=error, error_code=2)
