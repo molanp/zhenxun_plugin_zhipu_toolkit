@@ -254,7 +254,7 @@ class ChatManager:
                 "zhipu_toolkit",
                 session=session,
             )
-        return await extract_message_content (result.content)
+        return await extract_message_content(result.content)
 
     @classmethod
     async def add_user_message(cls, content: str, uid: str) -> None:
