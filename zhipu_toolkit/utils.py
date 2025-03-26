@@ -69,7 +69,7 @@ async def str2msg(message: str) -> list:
     return segments
 
 
-async def get_user_nickname(session: Session) -> str:
+async def get_user_username(session: Session) -> str:
     if (
         hasattr(session.member, "nick")
         and session.member is not None
@@ -161,15 +161,15 @@ async def migrate_user_data(uid: str, messages: list[dict]) -> bool:
         return False
 
 
-async def format_usr_msg(nickname: str, session: Uninfo, msg: str) -> str:
+async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     """\n"""
     data = {
         "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "nickname": nickname,
+        "username": username,
         "uid": session.user.id,
         "message": msg,
     }
-    return ujson.dumps(data, ensure_ascii=False)
+    return str(data)
 
 
 async def extract_message_content(msg: str) -> str:
@@ -182,23 +182,10 @@ async def extract_message_content(msg: str) -> str:
     """
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
-        rf"(?:\([^)]+\))?"  # 修改：匹配括号内的任意内容（直到右括号）
+        rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
         rf"[:：]\s*"  # 匹配冒号及空格
         rf"(?P<message>.*)$",  # 捕获消息内容
         re.DOTALL,
     )
     match = pattern.match(msg)
     return match["message"].strip() if match else msg.strip()
-
-
-async def get_answer(answer: str | None) -> str | None:
-    if answer is None:
-        return None
-    try:
-        data = ujson.loads(str(answer).strip())["answer"]
-    except (ujson.JSONDecodeError, KeyError, TypeError):
-        data = str(answer).strip()
-    data = str(data).replace("\\n", "\n").replace("\\t", "\t")
-    if data == "{}":
-        return None
-    return await extract_message_content(data)

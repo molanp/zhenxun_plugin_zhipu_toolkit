@@ -25,11 +25,11 @@ from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
     format_usr_msg,
-    get_answer,
     get_request_id,
-    get_user_nickname,
+    get_user_username,
     migrate_user_data,
     msg2str,
+    extract_message_content,
     remove_directory_with_retry,
 )
 
@@ -55,14 +55,14 @@ async def cache_group_message(message: UniMsg, session: Session, self=None) -> N
     if self is not None:
         msg = GroupMessageModel(
             uid=session.self_id,
-            nickname=self["nickname"],
+            username=self["username"],
             msg=self["msg"],
             time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     else:
         msg = GroupMessageModel(
             uid=session.user.id,
-            nickname=await get_user_nickname(session),
+            username=await get_user_username(session),
             msg=await msg2str(message),
             time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
@@ -203,28 +203,28 @@ class ChatManager:
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
-        nickname = await get_user_nickname(session)
-        soul = '### 请使用{"answer": string}的JSON对象结构回复\n***\n' + ChatConfig.get(
+        username = await get_user_username(session)
+        soul = '消息内容将包含附加信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答\n***\n' + ChatConfig.get(
             "SOUL"
         )
         await cls.add_system_message(soul, uid)
         message = await msg2str(msg)
         if len(message) > 4095:
             logger.warning(
-                f"USER {uid} NICKNAME {nickname} 问题: {message} ---- 超出最大token限制: 4095",  # noqa: E501
+                f"USER {uid} USERNAME {username} 问题: {message} ---- 超出最大token限制: 4095",  # noqa: E501
                 "zhipu_toolkit",
                 session=session,
             )
             return "超出最大token限制: 4095"
         await cls.add_user_message(
-            await format_usr_msg(nickname, session, message), uid
+            await format_usr_msg(username, session, message), uid
         )
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
         )
         if result.error_code == 1:
             logger.info(
-                f"NICKNAME `{nickname}` 问题: {message} ---- 触发内容审查",
+                f"USERNAME `{username}` 问题: {message} ---- 触发内容审查",
                 "zhipu_toolkit",
                 session=session,
             )
@@ -249,19 +249,12 @@ class ChatManager:
                 session,
                 temperature=0.5,
             )
-            logger.info(
-                f"NICKNAME `{nickname}` 问题：{message} ---- 回答：{result.content}",
+        logger.info(
+                f"USERNAME `{username}` 问题：{message} ---- 回答：{result.content}",
                 "zhipu_toolkit",
                 session=session,
             )
-            return result.content
-        if result.content is not None:
-            logger.info(
-                f"NICKNAME `{nickname}` 问题：{message} ---- 回答：{result.content}",
-                "zhipu_toolkit",
-                session=session,
-            )
-            return result.content
+        return await extract_message_content (result.content)
 
     @classmethod
     async def add_user_message(cls, content: str, uid: str) -> None:
@@ -319,7 +312,7 @@ class ChatManager:
             return
 
         content = "".join(
-            f"[{msg.time} NICKNAME {msg.nickname} UID {msg.uid}]:{msg.msg}\n\n"
+            f"[{msg.time} USERNAME {msg.username} @UID {msg.uid}]:{msg.msg}\n\n"
             for msg in group_msg
         )
         head = f"当前时间为{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n**\n你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}(UID: {session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n*** 回复格式为`username(uid):message`***\n下面是群组的聊天记录：\n***"  # noqa: E501
@@ -362,11 +355,11 @@ class ChatManager:
             session,
             {
                 "uid": session.self_id,
-                "nickname": BotConfig.self_nickname,
+                "username": BotConfig.self_nickname,
                 "msg": result.content,
             },
         )
-        return result.content
+        return await extract_message_content(result.content)
 
     @classmethod
     async def get_zhipu_result(
@@ -397,7 +390,7 @@ class ChatManager:
                     request_id=request_id,
                     tools=tools,
                     temperature=temperature,
-                    response_format={"type": "json_object"},
+                    response_format={"type": "text"},
                 ),
             )
         except Exception as e:
@@ -443,7 +436,7 @@ class ChatManager:
             else:
                 return ZhipuResult(content=error, error_code=2)
         return ZhipuResult(
-            content=await get_answer(response.choices[0].message.content),  # type: ignore
+            content = response.choices[0].message.content,  # type: ignore
             error_code=0,
             message=response.choices[0].message,  # type: ignore
         )

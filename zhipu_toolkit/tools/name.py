@@ -10,7 +10,7 @@ class SetNameTool(Tool):
 
     def __init__(self):
         super().__init__(
-            name="set_user_nickname",
+            name="set_user_username",
             description=(
                 "在群组中设置指定用户的群昵称，需提供用户UID和新昵称，"
                 "返回操作结果（成功/失败原因）。"
