@@ -146,7 +146,8 @@ async def _(bot: Bot, event: Event, session: Session = UniSession()):
 
 @chat.handle()
 async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession()):
-    if await is_to_me(event):
+   tome, reply = await is_to_me(event)
+    if tome:
         if msg.only(Text) and msg.extract_plain_text().strip() == "":
             result = await hello()
             await UniMessage([Text(result[0]), Image(path=result[1])]).finish(
@@ -154,14 +155,12 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
             )
         if ChatConfig.get("API_KEY") == "":
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
-        else:
-            result = await ChatManager.normal_chat_result(msg, session)
-            if result is None:
-                return
-            for r, delay in await split_text(result):
-                await UniMessage(r).send()
-                await cache_group_message(UniMessage(r), session)
-                await asyncio.sleep(delay)
+            return
+        result = await ChatManager.normal_chat_result(msg, session)
+        for r, delay in await split_text(result):
+            await UniMessage(r).send(reply_to=reply)
+            await cache_group_message(UniMessage(r), session)
+            await asyncio.sleep(delay)
     elif ensure_group(session) and await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
             return

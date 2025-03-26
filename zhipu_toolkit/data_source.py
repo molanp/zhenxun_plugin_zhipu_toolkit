@@ -188,7 +188,7 @@ class ChatManager:
                 )
 
     @classmethod
-    async def normal_chat_result(cls, msg: UniMsg, session: Session) -> str | None:
+    async def normal_chat_result(cls, msg: UniMsg, session: Session) -> str:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
                 uid = session.user.id
