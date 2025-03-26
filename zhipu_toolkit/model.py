@@ -12,7 +12,7 @@ from zhenxun.services.db_context import Model
 class GroupMessageModel(BaseModel):
     uid: str
     """用户ID"""
-    nickname: str
+    username: str
     """用户昵称"""
     msg: str
     """消息内容"""
