@@ -196,9 +196,9 @@ async def get_answer(answer: str | None) -> str | None:
         return None
     try:
         data = ujson.loads(str(answer).strip())["answer"]
-    except (ujson.JSONDecodeError, KeyError):
+    except (ujson.JSONDecodeError, KeyError, TypeError):
         data = str(answer).strip()
-    data = data.replace("\\n", "\n").replace("\\t", "\t")
+    data = str(data).replace("\\n", "\n").replace("\\t", "\t")
     if data == "{}":
         return None
     return await extract_message_content(data)
