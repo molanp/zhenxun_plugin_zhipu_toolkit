@@ -3,7 +3,7 @@ from nonebot.adapters import Event
 from .config import nicknames
 
 
-async def is_to_me(event: Event) -> tuple[bol, bool]:
+async def is_to_me(event: Event) -> tuple[bool, bool]:
     msg = event.get_message().extract_plain_text()
     for nickname in nicknames:
         if nickname in msg:
