@@ -4,7 +4,6 @@ import re
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import get_driver, on_message, on_regex, require
-from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
 
 from zhenxun.plugins.zhipu_toolkit.model import ZhipuChatHistory
@@ -45,18 +44,6 @@ driver = get_driver()
 @driver.on_startup
 async def handle_connect():
     await ChatManager.initialize()
-
-
-@scheduler.scheduled_job(
-    "interval",
-    minutes=5,
-)
-async def save_chat_history():
-    try:
-        updated = await ZhipuChatHistory.update_system_content(ChatConfig.get("SOUL"))
-        logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
-    except Exception as e:
-        logger.error("同步系统提示词失败", "zhipu_toolkit", e=e)
 
 
 draw_pic = on_alconna(

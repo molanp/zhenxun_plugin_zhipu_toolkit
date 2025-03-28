@@ -204,9 +204,8 @@ class ChatManager:
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
         username = await get_user_username(session)
-        soul = '消息内容将包含附加信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答\n***\n' + ChatConfig.get(
-            "SOUL"
-        )
+        await cls.add_system_message("消息内容将包含附加信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据格式。", uid)
+        soul = ChatConfig.get("SOUL")
         await cls.add_system_message(soul, uid)
         message = await msg2str(msg)
         if len(message) > 4095:
@@ -316,7 +315,6 @@ class ChatManager:
             for msg in group_msg
         )
         head = f"当前时间为{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n**\n你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}(UID: {session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n*** 回复格式为`username(uid):message`***\n下面是群组的聊天记录：\n***"  # noqa: E501
-        foot = "\n***"
         soul = (
             ChatConfig.get("SOUL")
             if ChatConfig.get("IMPERSONATION_SOUL") is False
@@ -331,8 +329,12 @@ class ChatManager:
                     "content": soul,
                 },
                 {
+                    "role":    "system",
+                    "content": head
+                },
+                {
                     "role": "user",
-                    "content": head + content + foot,
+                    "content": content,
                 },
             ],
             session,
