@@ -7,11 +7,11 @@ from nonebot import get_driver, on_message, on_regex, require
 from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
 
-from zhenxun.plugins.zhipu_toolkit.model import ZhipuChatHistory
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
 from .utils import split_text
+from .model import ZhipuChatHistory
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
@@ -46,12 +46,11 @@ driver = get_driver()
 async def handle_connect():
     await ChatManager.initialize()
 
-
 @scheduler.scheduled_job(
     "interval",
     minutes=5,
 )
-async def save_chat_history():
+async def sync_system_prompt():
     try:
         updated = await ZhipuChatHistory.update_system_content(ChatConfig.get("SOUL"))
         logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
