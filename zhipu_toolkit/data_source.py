@@ -204,9 +204,8 @@ class ChatManager:
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
         username = await get_user_username(session)
-        await cls.add_system_message("消息内容将包含附加信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据格式。", uid)
         soul = ChatConfig.get("SOUL")
-        await cls.add_system_message(soul, uid)
+        await cls.add_system_message("消息内容将包含附加信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据格式。"+soul, uid)
         message = await msg2str(msg)
         if len(message) > 4095:
             logger.warning(
@@ -329,12 +328,8 @@ class ChatManager:
                     "content": soul,
                 },
                 {
-                    "role":    "system",
-                    "content": head
-                },
-                {
                     "role": "user",
-                    "content": content,
+                    "content": head + content,
                 },
             ],
             session,
