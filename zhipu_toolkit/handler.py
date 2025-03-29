@@ -109,7 +109,7 @@ async def _(result: Arparma):
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
             response = await loop.run_in_executor(
                 None,
