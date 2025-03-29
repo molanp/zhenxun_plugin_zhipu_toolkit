@@ -59,7 +59,7 @@ async def sync_system_prompt():
 
 
 draw_pic = on_alconna(
-    Alconna("生成图片", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
+    Alconna("生成图片", Args["size?", "re:(\d+)x(\d+)", "1440x960"]["msg?", AllParam], meta=CommandMeta(compact=True)),
     priority=5,
     block=True,
 )
@@ -102,9 +102,24 @@ clear_chat = on_alconna(
 
 
 @draw_pic.handle()
-async def _(msg: Match[str]):
-    if msg.available:
-        draw_pic.set_path_arg("msg", str(msg.result))
+async def _(result: Arparma):
+    if not result.find("msg"):
+       await draw_pic.finish(Text("虚空绘画？内容呢？"), reply_to=True)
+    if ChatConfig.get("API_KEY") == "":
+        await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
+    else:
+        try:
+            loop = asyncio.get_event_loop()
+            client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
+            response = await loop.run_in_executor(
+                None,
+                lambda: client.images.generations(
+                    model=ChatConfig.get("PIC_MODEL"), prompt="".join(map(str, result.query("msg"))), size=result.query("size")
+                ),
+            )
+            await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
+        except Exception as e:
+            await draw_pic.send(Text(f"错了：{e}"), reply_to=True)
 
 
 @draw_video.handle()
@@ -133,7 +148,6 @@ async def _(result: Arparma):
                 await draw_video.send(
                     Text(f"任务提交失败，e:{response}"), reply_to=True
                 )
-
 
 @byd_mode.handle()
 async def _(bot: Bot, event: Event, session: Session = UniSession()):
@@ -223,25 +237,6 @@ async def _(session: Session = UniSession()):
         Text(f"已清理 {count} 条用户数据"),
         reply_to=True,
     )
-
-
-@draw_pic.got_path("msg", prompt="你要画什么呢")
-async def handle_check(msg: str):
-    if ChatConfig.get("API_KEY") == "":
-        await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
-    else:
-        try:
-            loop = asyncio.get_event_loop()
-            client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-            response = await loop.run_in_executor(
-                None,
-                lambda: client.images.generations(
-                    model=ChatConfig.get("PIC_MODEL"), prompt=msg, size="1440x720"
-                ),
-            )
-            await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
-        except Exception as e:
-            await draw_pic.send(Text(f"错了：{e}"), reply_to=True)
 
 
 @clear_chat.handle()
