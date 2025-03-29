@@ -79,7 +79,7 @@ async def cache_group_message(message: UniMsg, session: Session, self=None) -> N
         GROUP_MSG_CACHE[gid] = [msg]
 
 
-async def submit_task_to_zhipuai(message: str):
+async def submit_task_to_zhipuai(message: str, image_url: str):
     """
     异步提交视频生成任务到ZhipuAI。
 
@@ -88,6 +88,7 @@ async def submit_task_to_zhipuai(message: str):
 
     参数:
     - message: str - 视频生成的提示。
+    - image_url: str - 视频生成参考的图片
 
     返回:
     - 无
@@ -95,6 +96,7 @@ async def submit_task_to_zhipuai(message: str):
     client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
     return client.videos.generations(
         model=ChatConfig.get("VIDEO_MODEL"),
+        image_url=image_url,
         prompt=message,
         with_audio=True,
         request_id=await get_request_id(),
