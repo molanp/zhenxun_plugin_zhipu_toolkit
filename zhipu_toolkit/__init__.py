@@ -19,8 +19,8 @@ __plugin_meta__ = PluginMetadata(
     usage=f"""
     AI全家桶，一次安装，到处使用，省时省力省心
     usage:
-        生成图片 <prompt>
-        生成视频 <prompt>
+        生成图片 (可选size) <prompt>
+        生成视频 (可选基于生成内容图片) <prompt>
         清理我的会话:   用于清理你与AI的聊天记录
         清理会话 @user / uid : (仅管理员) 用于清理指定用户的会话记录,支持多个目标
         清理群会话: (仅管理员)用于清理本群的大杂烩记录，仅当分组模式为group时生效
