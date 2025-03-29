@@ -123,10 +123,31 @@ async def _(result: Arparma):
 
 
 @draw_video.handle()
-async def _(msg: Match[str]):
-    if msg.available:
-        draw_video.set_path_arg("msg", str(msg.result))
-
+async def _(result: Arparma):
+    if not result.find("msg"):
+       await draw_video.finish(Text("虚空生成？内容呢？"), reply_to=True)
+    if ChatConfig.get("API_KEY") == "":
+        await draw_video.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
+    else:
+        try:
+            result_list = result.query("msg")
+            non_image_str = "".join(str(x) for x in result_list if not isinstance(x, Image))
+            image_url = next((x.url.replace("https", "http") for x in result_list if isinstance(x, Image)), None)
+            response = await submit_task_to_zhipuai(non_image_str, image_url)
+        except Exception as e:
+            await draw_video.send(Text(str(e)))
+        else:
+            if response.task_status != "FAIL":
+                await draw_video.send(
+                    Text(f"任务已提交,id: {response.id}"), reply_to=True
+                )
+                asyncio.create_task(  # noqa: RUF006
+                    check_task_status_periodically(response.id, draw_video)  # type: ignore
+                )
+            else:
+                await draw_video.send(
+                    Text(f"任务提交失败，e:{response}"), reply_to=True
+                )
 
 @byd_mode.handle()
 async def _(bot: Bot, event: Event, session: Session = UniSession()):
@@ -173,7 +194,12 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
         result = await ChatManager.normal_chat_result(msg, session)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
-            await cache_group_message(UniMessage(r), session)
+            await cache_group_message(UniMessage(r), session, {
+                "uid": session.self_id,
+                "username": BotConfig.self_nickname,
+                "msg": UniMessage(r)
+                }
+            )
             await asyncio.sleep(delay)
     elif ensure_group(session) and await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
@@ -211,29 +237,6 @@ async def _(session: Session = UniSession()):
         Text(f"已清理 {count} 条用户数据"),
         reply_to=True,
     )
-
-
-@draw_video.got_path("msg", prompt="你要制作什么视频呢")
-async def submit_task(msg: str):
-    if ChatConfig.get("API_KEY") == "":
-        await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
-    else:
-        try:
-            response = await submit_task_to_zhipuai(msg)
-        except Exception as e:
-            await draw_video.send(Text(str(e)))
-        else:
-            if response.task_status != "FAIL":
-                await draw_video.send(
-                    Text(f"任务已提交,id: {response.id}"), reply_to=True
-                )
-                asyncio.create_task(  # noqa: RUF006
-                    check_task_status_periodically(response.id, draw_video)  # type: ignore
-                )
-            else:
-                await draw_video.send(
-                    Text(f"任务提交失败，e:{response}"), reply_to=True
-                )
 
 
 @clear_chat.handle()
