@@ -163,13 +163,14 @@ async def migrate_user_data(uid: str, messages: list[dict]) -> bool:
 
 async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     """\n"""
-    data = {
-        "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "username": username,
-        "uid": session.user.id,
-        "message": msg,
-    }
-    return str(data)
+    return (
+        "<META_DATA>\n"
+        f"当前时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"昵称: {username}\n"
+        f"UID: {session.user.id}\n"
+        "</META_DATA>\n"
+        f"{msg}"
+    )
 
 
 async def extract_message_content(msg: str) -> str:
