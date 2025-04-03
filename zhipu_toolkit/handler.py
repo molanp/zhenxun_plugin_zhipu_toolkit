@@ -197,7 +197,7 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
             await cache_group_message(UniMessage(r), session, {
                 "uid": session.self_id,
                 "username": BotConfig.self_nickname,
-                "msg": UniMessage(r)
+                "msg": r
                 }
             )
             await asyncio.sleep(delay)
