@@ -7,6 +7,7 @@ from nonebot import get_driver, on_message, on_regex, require
 from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
 
+from zhenxun.configs.config import BotConfig
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
@@ -20,7 +21,6 @@ from nonebot_plugin_alconna import (
     Arparma,
     At,
     Image,
-    Match,
     Text,
     UniMessage,
     UniMsg,
