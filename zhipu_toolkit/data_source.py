@@ -208,7 +208,7 @@ class ChatManager:
         username = await get_user_username(session)
         soul = ChatConfig.get("SOUL")
         await cls.add_system_message(
-            f"消息内容将包含附加信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据格式。\n{soul}",
+            f"消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n\n{soul}",
             uid,
         )
         message = await msg2str(msg)
@@ -231,14 +231,16 @@ class ChatManager:
                 "zhipu_toolkit",
                 session=session,
             )
-            return result.content
+            return result.content # type: ignore
         if result.error_code == 2:
             logger.error(
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
             return f"出错了: {result.content}"
         if result.message is None:
-            logger.error(f"Missing result.message for uid: {uid}, returning error. Result content: {result.content}")
+            logger.error(
+                f"Missing result.message for uid: {uid}, returning error. Result content: {result.content}"
+            )
             return f"出错了: {result.content}"
         await cls.add_anytype_message(uid, result.message)
         tool_result = await cls.parse_function_call(
@@ -253,11 +255,11 @@ class ChatManager:
                 temperature=0.5,
             )
         logger.info(
-                f"USERNAME `{username}` 问题：{message} ---- 回答：{result.content}",
-                "zhipu_toolkit",
-                session=session,
-            )
-        return await extract_message_content(result.content)
+            f"USERNAME `{username}` 问题：{message} ---- 回答：{result.content}",
+            "zhipu_toolkit",
+            session=session,
+        )
+        return await extract_message_content(result.content) # type: ignore
 
     @classmethod
     async def add_user_message(cls, content: str, uid: str) -> None:
@@ -361,7 +363,7 @@ class ChatManager:
                 "msg": result.content,
             },
         )
-        return await extract_message_content(result.content)
+        return await extract_message_content(result.content) # type: ignore
 
     @classmethod
     async def get_zhipu_result(
@@ -438,7 +440,7 @@ class ChatManager:
             else:
                 return ZhipuResult(content=error, error_code=2)
         return ZhipuResult(
-            content = response.choices[0].message.content,  # type: ignore
+            content=response.choices[0].message.content,  # type: ignore
             error_code=0,
             message=response.choices[0].message,  # type: ignore
         )
