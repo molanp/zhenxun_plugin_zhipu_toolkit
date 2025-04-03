@@ -36,7 +36,9 @@ from .utils import (
 GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
 
 
-async def cache_group_message(message: UniMsg, session: Session, self=None) -> None:
+async def cache_group_message(
+    message: UniMsg, session: Session, self_name=None
+) -> None:
     """
     异步缓存群组消息函数。
 
@@ -47,16 +49,16 @@ async def cache_group_message(message: UniMsg, session: Session, self=None) -> N
     参数:
     - message: UniMsg类型，表示接收到的消息。
     - session: Session类型，表示当前会话，包含消息上下文信息。
-    - self: 可选参数，表示如果消息来自机器人自身，该参数不为空。
+    - self_name: 可选参数，表示如果消息来自机器人自身，该参数不为空。
 
     返回值:
     无返回值。
     """
-    if self is not None:
+    if self_name is not None:
         msg = GroupMessageModel(
             uid=session.self_id,
-            username=self["username"],
-            msg=self["msg"],
+            username=self_name,
+            msg=await msg2str(message),
             time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     else:
@@ -79,7 +81,7 @@ async def cache_group_message(message: UniMsg, session: Session, self=None) -> N
         GROUP_MSG_CACHE[gid] = [msg]
 
 
-async def submit_task_to_zhipuai(message: str, image_url: str):
+async def submit_task_to_zhipuai(message: str, image_url: str = ""):
     """
     异步提交视频生成任务到ZhipuAI。
 
@@ -88,7 +90,7 @@ async def submit_task_to_zhipuai(message: str, image_url: str):
 
     参数:
     - message: str - 视频生成的提示。
-    - image_url: str - 视频生成参考的图片
+    - image_url: str | None - 视频生成参考的图片
 
     返回:
     - 无
@@ -231,7 +233,7 @@ class ChatManager:
                 "zhipu_toolkit",
                 session=session,
             )
-            return result.content # type: ignore
+            return result.content  # type: ignore
         if result.error_code == 2:
             logger.error(
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
@@ -259,7 +261,7 @@ class ChatManager:
             "zhipu_toolkit",
             session=session,
         )
-        return await extract_message_content(result.content) # type: ignore
+        return await extract_message_content(result.content)  # type: ignore
 
     @classmethod
     async def add_user_message(cls, content: str, uid: str) -> None:
@@ -363,7 +365,7 @@ class ChatManager:
                 "msg": result.content,
             },
         )
-        return await extract_message_content(result.content) # type: ignore
+        return await extract_message_content(result.content)  # type: ignore
 
     @classmethod
     async def get_zhipu_result(

@@ -2,7 +2,7 @@ import asyncio
 import random
 import re
 
-from arclet.alconna import Alconna, AllParam, Args, CommandMeta, Arparma
+from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import get_driver, on_message, on_regex, require
 from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
@@ -11,8 +11,8 @@ from zhenxun.configs.config import BotConfig
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
-from .utils import split_text
 from .model import ZhipuChatHistory
+from .utils import split_text
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
@@ -46,6 +46,7 @@ driver = get_driver()
 async def handle_connect():
     await ChatManager.initialize()
 
+
 @scheduler.scheduled_job(
     "interval",
     minutes=5,
@@ -59,7 +60,11 @@ async def sync_system_prompt():
 
 
 draw_pic = on_alconna(
-    Alconna("生成图片", Args["size?", "re:(\d+)x(\d+)", "1440x960"]["msg?", AllParam], meta=CommandMeta(compact=True)),
+    Alconna(
+        "生成图片",
+        Args["size?", "re:(\d+)x(\d+)", "1440x960"]["msg?", AllParam],
+        meta=CommandMeta(compact=True),
+    ),
     priority=5,
     block=True,
 )
@@ -104,7 +109,7 @@ clear_chat = on_alconna(
 @draw_pic.handle()
 async def _(result: Arparma):
     if not result.find("msg"):
-       await draw_pic.finish(Text("虚空绘画？内容呢？"), reply_to=True)
+        await draw_pic.finish(Text("虚空绘画？内容呢？"), reply_to=True)
     if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
@@ -114,7 +119,9 @@ async def _(result: Arparma):
             response = await loop.run_in_executor(
                 None,
                 lambda: client.images.generations(
-                    model=ChatConfig.get("PIC_MODEL"), prompt="".join(map(str, result.query("msg"))), size=result.query("size")
+                    model=ChatConfig.get("PIC_MODEL"),
+                    prompt="".join(map(str, result.query("msg"))),  # type: ignore
+                    size=result.query("size"),
                 ),
             )
             await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
@@ -125,14 +132,25 @@ async def _(result: Arparma):
 @draw_video.handle()
 async def _(result: Arparma):
     if not result.find("msg"):
-       await draw_video.finish(Text("虚空生成？内容呢？"), reply_to=True)
+        await draw_video.finish(Text("虚空生成？内容呢？"), reply_to=True)
     if ChatConfig.get("API_KEY") == "":
         await draw_video.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
         try:
             result_list = result.query("msg")
-            non_image_str = "".join(str(x) for x in result_list if not isinstance(x, Image))
-            image_url = next((x.url.replace("https", "http") for x in result_list if isinstance(x, Image)), None)
+            non_image_str = "".join(
+                str(x)
+                for x in result_list  # type: ignore
+                if not isinstance(x, Image)  # type: ignore
+            )
+            image_url = next(
+                (
+                    x.url.replace("https", "http")  # type: ignore
+                    for x in result_list  # type: ignore
+                    if isinstance(x, Image)
+                ),
+                "",
+            )
             response = await submit_task_to_zhipuai(non_image_str, image_url)
         except Exception as e:
             await draw_video.send(Text(str(e)))
@@ -148,6 +166,7 @@ async def _(result: Arparma):
                 await draw_video.send(
                     Text(f"任务提交失败，e:{response}"), reply_to=True
                 )
+
 
 @byd_mode.handle()
 async def _(bot: Bot, event: Event, session: Session = UniSession()):
@@ -194,12 +213,7 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
         result = await ChatManager.normal_chat_result(msg, session)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
-            await cache_group_message(UniMessage(r), session, {
-                "uid": session.self_id,
-                "username": BotConfig.self_nickname,
-                "msg": r
-                }
-            )
+            await cache_group_message(UniMessage(r), session, BotConfig.self_nickname)
             await asyncio.sleep(delay)
     elif ensure_group(session) and await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
@@ -209,6 +223,11 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
             result = await ChatManager.impersonation_result(msg, session)
             if result:
                 await UniMessage(result).send()
+                await cache_group_message(
+                    UniMessage(result),
+                    session,
+                    BotConfig.self_nickname,
+                )
     else:
         logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
 
@@ -243,7 +262,7 @@ async def _(session: Session = UniSession()):
 async def _(param: Arparma):
     targets = [
         str(p.target) if isinstance(p, At) else p.text.strip()
-        for p in param.query("target") # type: ignore
+        for p in param.query("target")  # type: ignore
         if (isinstance(p, At) or (isinstance(p, Text) and p.text.strip()))
     ]
 
