@@ -356,15 +356,6 @@ class ChatManager:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
         logger.info(f"伪人回复: {result}", "zhipu_toolkit", session=session)
-        await cache_group_message(
-            msg,
-            session,
-            {
-                "uid": session.self_id,
-                "username": BotConfig.self_nickname,
-                "msg": result.content,
-            },
-        )
         return await extract_message_content(result.content)  # type: ignore
 
     @classmethod
