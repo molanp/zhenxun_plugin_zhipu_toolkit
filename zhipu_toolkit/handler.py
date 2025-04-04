@@ -220,7 +220,7 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
             return
         await cache_group_message(msg, session)
         if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
-            result = await ChatManager.impersonation_result(msg, session)
+            result = await ChatManager.impersonation_result(session)
             if result:
                 await UniMessage(result).send()
                 await cache_group_message(
