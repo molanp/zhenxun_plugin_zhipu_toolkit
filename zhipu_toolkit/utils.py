@@ -181,6 +181,8 @@ async def extract_message_content(msg: str) -> str:
     返回:
     - str: 提取的实际消息内容。
     """
+    if msg is None:
+       return
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
         rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
