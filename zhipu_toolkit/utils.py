@@ -77,7 +77,7 @@ async def get_user_username(session: Session) -> str:
         and session.member.nick is not None
     ):
         return session.member.nick
-    return session.user.name if session.user.name is not None else "未知"
+    return session.user.name if session.user.name != "" else "未知用户"
 
 
 async def generate_image_description(url: str):
