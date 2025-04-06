@@ -166,8 +166,8 @@ async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     return (
         "<META_DATA>\n"
         f"当前时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        f"昵称: {username}\n"
-        f"UID: {session.user.id}\n"
+        f"对话者昵称: {username}\n"
+        f"对话者UID: {session.user.id}\n"
         "</META_DATA>\n"
         f"{msg}"
     )
