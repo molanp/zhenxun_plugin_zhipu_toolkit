@@ -3,7 +3,7 @@ import random
 import re
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
-from nonebot import get_driver, on_message, on_regex, require
+from nonebot import get_driver, on_message, require
 from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
 
@@ -75,8 +75,8 @@ draw_video = on_alconna(
     block=True,
 )
 
-byd_mode = on_regex(
-    r"(启用|禁用)伪人模式\s*(\d*)",
+byd_mode = on_alconna(
+    Alxonna("re:(启用|禁用)伪人模式\s*(\d*)"),
     priority=5,
     permission=ADMIN() | SUPERUSER,
     block=True,
@@ -84,7 +84,9 @@ byd_mode = on_regex(
 
 chat = on_message(priority=999, block=True)
 
-clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
+clear_my_chat = on_alconna(
+   Alconna("清理我的会话"),
+   priority=5, block=True)
 
 clear_all_chat = on_alconna(
     Alconna("清理全部会话"), permission=SUPERUSER, priority=5, block=True
