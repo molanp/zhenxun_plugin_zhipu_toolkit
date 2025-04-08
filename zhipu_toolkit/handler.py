@@ -76,7 +76,7 @@ draw_video = on_alconna(
 )
 
 byd_mode = on_alconna(
-    Alxonna("re:(启用|禁用)伪人模式\s*(\d*)"),
+    Alconna("re:(启用|禁用)伪人模式\s*(\d*)"),
     priority=5,
     permission=ADMIN() | SUPERUSER,
     block=True,
