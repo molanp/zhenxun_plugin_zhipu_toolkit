@@ -314,7 +314,7 @@ class ChatManager:
         return await ZhipuChatHistory.get_history(uid)
 
     @classmethod
-    async def impersonation_result(cls, msg: UniMsg, session: Session) -> str | None:
+    async def impersonation_result(cls, session: Session) -> str | None:
         gid = session.scene.id
         if not (group_msg := GROUP_MSG_CACHE[gid]):
             return
@@ -356,16 +356,7 @@ class ChatManager:
         if result.content is not None and "<EMPTY>" in result.content:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
-        logger.info(f"伪人回复: {result}", "zhipu_toolkit", session=session)
-        await cache_group_message(
-            msg,
-            session,
-            {
-                "uid": session.self_id,
-                "username": BotConfig.self_nickname,
-                "msg": result.content,
-            },
-        )
+        logger.info(f"伪人回复: {result.content}", "zhipu_toolkit", session=session)
         return await extract_message_content(result.content)  # type: ignore
 
     @classmethod

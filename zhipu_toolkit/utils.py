@@ -79,7 +79,7 @@ async def get_username_by_session(session: Session) -> str:
         and session.member.nick is not None
     ):
         return session.member.nick
-    return session.user.name if session.user.name is not None else "未知"
+    return session.user.name if session.user.name != "" else "未知用户"
 
 
 async def generate_image_description(url: str):
@@ -183,6 +183,8 @@ async def extract_message_content(msg: str) -> str:
     返回:
     - str: 提取的实际消息内容。
     """
+    if msg is None:
+       return
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
         rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
