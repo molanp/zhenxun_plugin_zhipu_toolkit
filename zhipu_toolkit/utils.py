@@ -5,13 +5,15 @@ import re
 import shutil
 import uuid
 
+from nonebot import get_bot
 from nonebot_plugin_alconna import At, Image, Text, UniMsg
 from nonebot_plugin_uninfo import Session, Uninfo
-import ujson
 from zhipuai import ZhipuAI
 
-from zhenxun.services.log import logger
 from zhenxun.configs.config import BotConfig
+from zhenxun.services.log import logger
+from zhenxun.utils.platform import PlatformUtils
+from zhenxun.utils.rules import ensure_group
 
 from .config import ChatConfig
 from .model import ZhipuChatHistory
@@ -69,7 +71,7 @@ async def str2msg(message: str) -> list:
     return segments
 
 
-async def get_user_username(session: Session) -> str:
+async def get_username_by_session(session: Session) -> str:
     if (
         hasattr(session.member, "nick")
         and session.member is not None
@@ -166,8 +168,8 @@ async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     return (
         "<META_DATA>\n"
         f"当前时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        f"昵称: {username}\n"
-        f"UID: {session.user.id}\n"
+        f"对话者昵称: {username}\n"
+        f"对话者UID: {session.user.id}\n"
         "</META_DATA>\n"
         f"{msg}"
     )
@@ -190,3 +192,14 @@ async def extract_message_content(msg: str) -> str:
     )
     match = pattern.match(msg)
     return match["message"].strip() if match else msg.strip()
+
+
+async def get_username(uid: str, session: Uninfo) -> str:
+    bot = get_bot(session.self_id)
+    info = await PlatformUtils.get_user(
+        bot, uid, session.scene.id if ensure_group(session) else None
+    )
+    if info is not None:
+        return info.card if info.card is not None and info.card != "" else info.name
+    else:
+        return "未知"
