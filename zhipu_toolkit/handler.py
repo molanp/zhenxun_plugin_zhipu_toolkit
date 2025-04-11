@@ -1,6 +1,7 @@
 import asyncio
 import random
 import re
+from typing import Any
 
 from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import get_driver, on_message, require
@@ -9,24 +10,29 @@ from zhipuai import ZhipuAI
 
 from zhenxun.configs.config import BotConfig
 from zhenxun.services.log import logger
+from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.rules import ensure_group
 
 from .model import ZhipuChatHistory
-from .utils import split_text
+from .utils import get_username, split_text
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
 from nonebot_plugin_alconna import (
+    Alconna,
+    Args,
     Arparma,
     At,
+    CommandMeta,
+    CustomNode,
     Image,
     Text,
     UniMessage,
     UniMsg,
     on_alconna,
 )
-from nonebot_plugin_uninfo import ADMIN, Session, UniSession
+from nonebot_plugin_uninfo import ADMIN, Session, Uninfo, UniSession
 
 from .config import ChatConfig
 from .data_source import (
@@ -62,7 +68,7 @@ async def sync_system_prompt():
 draw_pic = on_alconna(
     Alconna(
         "生成图片",
-        Args["size?", "re:(\d+)x(\d+)", "1440x960"]["msg?", AllParam],
+        Args["size?", r"re:(\d+)x(\d+)", "1440x960"]["msg?", AllParam],
         meta=CommandMeta(compact=True),
     ),
     priority=5,
@@ -102,6 +108,13 @@ clear_group_chat = on_alconna(
 
 clear_chat = on_alconna(
     Alconna("清理会话", Args["target", AllParam], meta=CommandMeta(compact=True)),
+    permission=ADMIN() | SUPERUSER,
+    priority=5,
+    block=True,
+)
+
+show_chat = on_alconna(
+    Alconna("查看会话", Args["target?", Any], meta=CommandMeta(compact=True)),
     permission=ADMIN() | SUPERUSER,
     priority=5,
     block=True,
@@ -171,8 +184,8 @@ async def _(result: Arparma):
 
 
 @byd_mode.handle()
-async def _(bot: Bot, event: Event, session: Session = UniSession()):
-    command = event.get_plaintext()
+async def _(bot: Bot, msg: UniMsg, session: Session = UniSession()):
+    command = msg.extract_plain_text().strip()
     if match := re.match(r"(启用|禁用)伪人模式(?:\s*(\d+))?", command):
         action = match[1]
         if group_id := match[2]:
@@ -277,3 +290,37 @@ async def _(param: Arparma):
     messages = [summary, *result]
 
     await clear_chat.send(UniMessage(messages), reply_to=True)
+
+
+@show_chat.handle()
+async def _(session: Uninfo, param: Arparma):
+    node_list = []
+    target = None
+    if p := param.query("target"):
+        if isinstance(p, At):
+            target = str(p.target)
+        elif isinstance(p, Text):
+            target = p.text.strip()
+        else:
+            target = str(p)
+
+    if target is None:
+        data = await ZhipuChatHistory.get_user_list()
+    else:
+        data = await ZhipuChatHistory.get_history(target)
+    for i in data:
+        if isinstance(i, dict):
+            assert isinstance(target, str)
+            if i["role"] in ["user", "assistant"]:
+                node_list.append(
+                    i["content"],
+                )
+        else:
+            node_list.append(
+                f"用户 {i[0]} 的记录数: {i[1]}",
+            )
+    await MessageUtils.alc_forward_msg(
+        node_list,
+        target or session.self_id,
+        await get_username(target or session.self_id, session),
+    ).send(reply_to=True)

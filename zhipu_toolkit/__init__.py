@@ -11,6 +11,7 @@ from .handler import (
     clear_my_chat,  # noqa: F401
     draw_pic,  # noqa: F401
     draw_video,  # noqa: F401
+    show_chat,  # noqa: F401
 )
 
 __plugin_meta__ = PluginMetadata(
@@ -37,6 +38,7 @@ __plugin_meta__ = PluginMetadata(
         superuser_help="""
         超级管理员额外命令
         格式:
+            查看会话 ?user : 查看指定user的会话记录或全部会话列表
             清理全部会话: 清理Bot缓存的全部会话记录
             启用/禁用伪人模式 群号: 开启或关闭指定群聊的伪人模式，空格是可选的
         """,

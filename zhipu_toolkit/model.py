@@ -2,6 +2,7 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 from tortoise import fields
+from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
 from zhipuai.types.chat.chat_completion import CompletionMessage
@@ -75,9 +76,10 @@ class ZhipuChatHistory(Model):
         :return: 包含所有历史记录的字典列表，格式示例：
         ```
             [{
+                "uid": "user_id",
                 "role": "user",
                 "content": "你好",
-                "tool_calls": null,
+                "create_time": "2023-07-01 12:00:00"
                 ...
             }]
         ```
@@ -100,3 +102,14 @@ class ZhipuChatHistory(Model):
         if uid:
             query = query.filter(uid=uid)
         return await query.update(content=content)
+
+    @classmethod
+    async def get_user_list(cls) -> list[tuple[str, int]]:
+        """获取所有用户的uid及其记录数量（元组列表形式）"""
+        results = (
+            await cls.all()
+            .annotate(record_count=Count("id"))
+            .group_by("uid")
+            .values("uid", "record_count")
+        )
+        return [(item["uid"], item["record_count"]) for item in results]

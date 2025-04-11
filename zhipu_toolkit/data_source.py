@@ -24,12 +24,12 @@ from .config import ChatConfig
 from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
+    extract_message_content,
     format_usr_msg,
     get_request_id,
-    get_user_username,
+    get_username_by_session,
     migrate_user_data,
     msg2str,
-    extract_message_content,
     remove_directory_with_retry,
 )
 
@@ -64,7 +64,7 @@ async def cache_group_message(
     else:
         msg = GroupMessageModel(
             uid=session.user.id,
-            username=await get_user_username(session),
+            username=await get_username_by_session(session),
             msg=await msg2str(message),
             time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
@@ -207,7 +207,7 @@ class ChatManager:
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
-        username = await get_user_username(session)
+        username = await get_username_by_session(session)
         soul = ChatConfig.get("SOUL")
         await cls.add_system_message(
             f"消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n\n{soul}",
@@ -241,7 +241,8 @@ class ChatManager:
             return f"出错了: {result.content}"
         if result.message is None:
             logger.error(
-                f"Missing result.message for uid: {uid}, returning error. Result content: {result.content}"
+                f"Missing result.message for uid: {uid}, returning error."
+                f"Result content: {result.content}"
             )
             return f"出错了: {result.content}"
         await cls.add_anytype_message(uid, result.message)
@@ -274,7 +275,7 @@ class ChatManager:
     @classmethod
     async def add_anytype_message(cls, uid: str, message: CompletionMessage) -> None:
         tool_calls_serialized = (
-            [call.model_dump() for call in message.tool_calls]
+            [call.model_dump() for call in message.tool_calls]  # type: ignore
             if message.tool_calls
             else None
         )
@@ -460,7 +461,7 @@ class ChatManager:
                 await cls.add_tool_call_message(uid, result, tool_call.id)
                 return result
             except Exception as e:
-                logger.warning(
+                logger.error(
                     f"UID {uid} 工具调用失败",
                     "zhipu_toolkit",
                     session=session,
