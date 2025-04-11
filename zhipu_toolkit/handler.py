@@ -297,7 +297,6 @@ async def _(session: Uninfo, param: Arparma):
     node_list = []
     target = None
     if p := param.query("target"):
-        logger.info(str(type(p)), "zhipu_toolkit")
         if isinstance(p, At):
             target = str(p.target)
         elif isinstance(p, Text):
