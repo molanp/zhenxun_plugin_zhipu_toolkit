@@ -37,7 +37,7 @@ async def msg2str(msg: UniMsg) -> str:
         elif isinstance(segment, Image):
             assert segment.url is not None
             url = segment.url.replace(
-                "https://multimedia.nt.qq.com.cn", "http://multimedia.nt.qq.com.cn"
+                "https://", "http://"
             )
             message += f"\n![{await generate_image_description(url)}]({url})"
         elif isinstance(segment, Text):
