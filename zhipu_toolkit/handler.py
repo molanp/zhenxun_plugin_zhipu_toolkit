@@ -323,6 +323,8 @@ async def _(session: Uninfo, param: Arparma):
             node_list.append(
                 f"用户 {i[0]} 的记录数: {i[1]}",
             )
+    if not node_list:
+        await show_chat.finish(Text("没有找到相关记录..."), reply_to=True)
     await MessageUtils.alc_forward_msg(
         node_list,
         target or session.self_id,
