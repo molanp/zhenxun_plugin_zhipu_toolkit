@@ -311,9 +311,13 @@ async def _(session: Uninfo, param: Arparma):
     for i in data:
         if isinstance(i, dict):
             assert isinstance(target, str)
-            if i["role"] in ["user", "assistant"]:
+            if i["role"] in ["system", "user", "assistant"]:
                 node_list.append(
                     i["content"],
+                )
+            elif i["role"] == "tool_call":
+                node_list.append(
+                    f"用户 {target} 的工具调用记录: {i['tool_calls']}",
                 )
         else:
             node_list.append(
