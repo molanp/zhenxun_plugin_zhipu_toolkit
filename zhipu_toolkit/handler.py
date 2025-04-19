@@ -311,7 +311,7 @@ async def _(session: Uninfo, param: Arparma):
     for i in data:
         if isinstance(i, dict):
             assert isinstance(target, str)
-            if i["role"] in ["system", "user", "assistant"]:
+            if i["role"] in ["user", "assistant"]:
                 node_list.append(
                     i["content"],
                 )
