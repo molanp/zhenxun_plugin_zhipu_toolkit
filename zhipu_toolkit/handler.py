@@ -315,7 +315,7 @@ async def _(session: Uninfo, param: Arparma):
                 node_list.append(
                     i["content"],
                 )
-            elif i["role"] == "tool_call":
+            elif i["role"] == "tool":
                 node_list.append(
                     f"用户 {target} 的工具调用记录: {i['tool_calls']}",
                 )
