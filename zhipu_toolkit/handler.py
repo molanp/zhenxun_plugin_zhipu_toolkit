@@ -108,7 +108,7 @@ clear_group_chat = on_alconna(
 
 clear_chat = on_alconna(
     Alconna("清理会话", Args["target", AllParam], meta=CommandMeta(compact=True)),
-    permission=ADMIN() | SUPERUSER,
+    permission=SUPERUSER,
     priority=5,
     block=True,
 )
