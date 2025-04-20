@@ -39,7 +39,7 @@ async def msg2str(msg: UniMsg) -> str:
             url = segment.url.replace(
                 "https://", "http://"
             )
-            message += f"\n![{await generate_image_description(url)}]({url})"
+            message += f"\n![图片内容:{await generate_image_description(url)}]({url})"
         elif isinstance(segment, Text):
             message += segment.text
     return message
