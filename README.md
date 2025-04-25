@@ -7,6 +7,8 @@
 > 插件需要智谱AI的API KEY，请安装插件后在`data/config.yaml`中配置，保存文件后插件会自动重载
 >
 > 插件默认使用平台的免费模型，只需注册即可，无任何花费
+>
+> ** 如使用QBot，请参考常见问题禁用此插件 **
 
 > [!NOTE]
 > **关于模型选择**
@@ -86,3 +88,11 @@ poetry add zhipuai
 ## ⁉️ Q&A
 - **Q:** 什么是伪人模式
 - 开启此模式后，bot会如同真人一般，读取最近20条群友的聊天记录，然后根据这些内容进行发言。此模式默认触发概率为20%，可以通过配置`IMPERSONATION_TRIGGER_FREQUENCY`进行修改.
+- **Q:** 为什么默认对QBot禁用AI功能？
+- 因为非腾讯元宝的AI服务大概率不会过审，所以默认禁用。
+
+## 📝 测试报告
+以下为官方测试人员对本插件的测试，可以看到AI对话没有通过审核
+
+![b93c564b550c99f874584b123aec8e59_720](https://github.com/user-attachments/assets/bf0230bd-5a3f-485c-8de8-9368e07f10d9)
+![d3109ebba637ab6721e3e898977335a8](https://github.com/user-attachments/assets/7281077e-b195-4b72-bfac-d6ed93d32a18)
