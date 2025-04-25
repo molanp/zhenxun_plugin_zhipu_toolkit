@@ -8,7 +8,7 @@
 >
 > 插件默认使用平台的免费模型，只需注册即可，无任何花费
 >
-> ** 如使用QBot，请参考常见问题禁用此插件 **
+> **如使用QBot，请参考常见问题禁用此插件**
 
 > [!NOTE]
 > **关于模型选择**
@@ -84,6 +84,7 @@ poetry add zhipuai
 | `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
 | `IMPERSONATION_SOUL` | **否** | `False` | 伪人模式的自定义人格,为`False`则同步`SOUL` |
 | `IMPERSONATION_BAN_GROUP` | **否** | `[]` | 禁用伪人模式的群组列表 |
+| `ENBALE_QBOT` | **否** | `False` | 允许QQBot使用本插件 |
 
 ## ⁉️ Q&A
 - **Q:** 什么是伪人模式
