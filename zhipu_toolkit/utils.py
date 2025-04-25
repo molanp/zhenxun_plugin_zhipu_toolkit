@@ -36,9 +36,7 @@ async def msg2str(msg: UniMsg) -> str:
             message += f"@[uid={segment.target}] "
         elif isinstance(segment, Image):
             assert segment.url is not None
-            url = segment.url.replace(
-                "https://", "http://"
-            )
+            url = segment.url.replace("https://", "http://")
             message += f"\n![图片内容:{await generate_image_description(url)}]({url})"
         elif isinstance(segment, Text):
             message += segment.text
@@ -79,7 +77,8 @@ async def get_username_by_session(session: Session) -> str:
         and session.member.nick is not None
     ):
         return session.member.nick
-    return session.user.name if session.user.name != "" else "未知用户"
+    name = session.user.name
+    return name if name != "" and name is not None else "未知用户"
 
 
 async def generate_image_description(url: str):
@@ -184,7 +183,7 @@ async def extract_message_content(msg: str) -> str:
     - str: 提取的实际消息内容。
     """
     if msg is None:
-       return
+        return
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
         rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）

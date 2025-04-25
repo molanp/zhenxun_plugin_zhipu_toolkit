@@ -1,9 +1,7 @@
 import asyncio
 import random
 import re
-from typing import Any
 
-from arclet.alconna import Alconna, AllParam, Args, CommandMeta
 from nonebot import get_driver, on_message, require
 from nonebot_plugin_apscheduler import scheduler
 from zhipuai import ZhipuAI
@@ -14,7 +12,7 @@ from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.rules import ensure_group
 
 from .model import ZhipuChatHistory
-from .utils import get_username, split_text
+from .utils import split_text
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
@@ -25,14 +23,14 @@ from nonebot_plugin_alconna import (
     Arparma,
     At,
     CommandMeta,
-    CustomNode,
     Image,
+    MultiVar,
     Text,
     UniMessage,
     UniMsg,
     on_alconna,
 )
-from nonebot_plugin_uninfo import ADMIN, Session, Uninfo, UniSession
+from nonebot_plugin_uninfo import ADMIN, Session, UniSession
 
 from .config import ChatConfig
 from .data_source import (
@@ -43,7 +41,7 @@ from .data_source import (
     hello,
     submit_task_to_zhipuai,
 )
-from .rule import is_to_me
+from .rule import enable_qbot, is_to_me
 
 driver = get_driver()
 
@@ -68,53 +66,74 @@ async def sync_system_prompt():
 draw_pic = on_alconna(
     Alconna(
         "生成图片",
-        Args["size?", r"re:(\d+)x(\d+)", "1440x960"]["msg?", AllParam],
+        Args["size?", r"re:(\d+)x(\d+)", "1440x960"]["msg?", MultiVar(Text | int)],
         meta=CommandMeta(compact=True),
     ),
+    rule=enable_qbot,
     priority=5,
     block=True,
 )
 
 draw_video = on_alconna(
-    Alconna("生成视频", Args["msg?", AllParam], meta=CommandMeta(compact=True)),
+    Alconna(
+        "生成视频",
+        Args["msg?", MultiVar(Text | int | Image)],
+        meta=CommandMeta(compact=True),
+    ),
+    rule=enable_qbot,
     priority=5,
     block=True,
 )
 
 byd_mode = on_alconna(
-    Alconna("re:(启用|禁用)伪人模式\s*(\d*)"),
+    Alconna(r"re:(启用|禁用)伪人模式\s*(\d*)"),
+    rule=enable_qbot,
     priority=5,
     permission=ADMIN() | SUPERUSER,
     block=True,
 )
 
-chat = on_message(priority=999, block=True)
+chat = on_message(priority=999, block=True, rule=enable_qbot)
 
 clear_my_chat = on_alconna(
-   Alconna("清理我的会话"),
-   priority=5, block=True)
+    Alconna("清理我的会话"), priority=5, block=True, rule=enable_qbot
+)
 
 clear_all_chat = on_alconna(
-    Alconna("清理全部会话"), permission=SUPERUSER, priority=5, block=True
+    Alconna("清理全部会话"),
+    permission=SUPERUSER,
+    priority=5,
+    block=True,
+    rule=enable_qbot,
 )
 
 clear_group_chat = on_alconna(
     Alconna("清理群会话"),
-    rule=ensure_group,
+    rule=ensure_group and enable_qbot,
     permission=ADMIN() | SUPERUSER,
     priority=5,
     block=True,
 )
 
 clear_chat = on_alconna(
-    Alconna("清理会话", Args["target", AllParam], meta=CommandMeta(compact=True)),
+    Alconna(
+        "清理会话",
+        Args["target", MultiVar(Text | int | At)],
+        meta=CommandMeta(compact=True),
+    ),
+    rule=enable_qbot,
     permission=SUPERUSER,
     priority=5,
     block=True,
 )
 
 show_chat = on_alconna(
-    Alconna("查看会话", Args["target?", Any], meta=CommandMeta(compact=True)),
+    Alconna(
+        "查看会话",
+        Args["target?", Text | int | At],
+        meta=CommandMeta(compact=True),
+    ),
+    rule=enable_qbot,
     permission=ADMIN() | SUPERUSER,
     priority=5,
     block=True,
@@ -128,6 +147,7 @@ async def _(result: Arparma):
     if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
     else:
+        prompt = " ".join(map(str, result.query("msg")))  # type: ignore
         try:
             loop = asyncio.get_running_loop()
             client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -135,7 +155,7 @@ async def _(result: Arparma):
                 None,
                 lambda: client.images.generations(
                     model=ChatConfig.get("PIC_MODEL"),
-                    prompt="".join(map(str, result.query("msg"))),  # type: ignore
+                    prompt=prompt,
                     size=result.query("size"),
                 ),
             )
@@ -153,7 +173,7 @@ async def _(result: Arparma):
     else:
         try:
             result_list = result.query("msg")
-            non_image_str = "".join(
+            non_image_str = " ".join(
                 str(x)
                 for x in result_list  # type: ignore
                 if not isinstance(x, Image)  # type: ignore
@@ -275,11 +295,14 @@ async def _(session: Session = UniSession()):
 
 @clear_chat.handle()
 async def _(param: Arparma):
-    targets = [
-        str(p.target) if isinstance(p, At) else p.text.strip()
-        for p in param.query("target")  # type: ignore
-        if (isinstance(p, At) or (isinstance(p, Text) and p.text.strip()))
-    ]
+    targets = []
+    for t in param.query("target"):  # type: ignore
+        if isinstance(t, At):
+            targets.append(t.target)
+        elif isinstance(t, Text):
+            targets.append(t.text.strip())
+        else:
+            targets.append(str(t))
 
     tasks = [ChatManager.clear_history(t) for t in targets]
     results = await asyncio.gather(*tasks)
@@ -293,7 +316,7 @@ async def _(param: Arparma):
 
 
 @show_chat.handle()
-async def _(session: Uninfo, param: Arparma):
+async def _(param: Arparma):
     node_list = []
     target = None
     if p := param.query("target"):
@@ -325,8 +348,8 @@ async def _(session: Uninfo, param: Arparma):
             )
     if not node_list:
         await show_chat.finish(Text("没有找到相关记录..."), reply_to=True)
-    await MessageUtils.alc_forward_msg(
-        node_list,
-        target or session.self_id,
-        await get_username(target or session.self_id, session),
-    ).send(reply_to=True)
+    if len(node_list) > 90:
+        node_list = node_list[:90] + [Text(f"...省略{len(node_list[91:])}条对话记录")]
+    await MessageUtils.alc_forward_msg(node_list, "80000", "匿名消息").send(
+        reply_to=True
+    )

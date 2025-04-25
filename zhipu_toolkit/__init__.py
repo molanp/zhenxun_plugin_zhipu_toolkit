@@ -32,7 +32,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="1.4.rc3",
+        version="1.4",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -130,6 +130,11 @@ __plugin_meta__ = PluginMetadata(
                 help="禁用伪人模式的群组列表",
                 default_value=[],
             ),
+            RegisterConfig(
+                key="ENBALE_QBOT",
+                value=False,
+                help="允许QQ官方Bot调用本插件",
+            )
         ],
     ).dict(),
 )

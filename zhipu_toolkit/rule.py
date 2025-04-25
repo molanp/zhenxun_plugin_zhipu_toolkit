@@ -1,6 +1,9 @@
 from nonebot.adapters import Event
+from nonebot_plugin_uninfo import Uninfo
 
-from .config import nicknames
+from zhenxun.utils.platform import PlatformUtils
+
+from .config import ChatConfig, nicknames
 
 
 async def is_to_me(event: Event) -> tuple[bool, bool]:
@@ -9,3 +12,9 @@ async def is_to_me(event: Event) -> tuple[bool, bool]:
         if nickname in msg:
             return True, False
     return event.is_tome(), True
+
+
+async def enable_qbot(session: Uninfo) -> bool:
+    return (
+        not PlatformUtils.is_qbot(session) or ChatConfig.get("ENBALE_QBOT") is not False
+    )
