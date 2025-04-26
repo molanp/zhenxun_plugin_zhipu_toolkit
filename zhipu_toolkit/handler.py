@@ -350,6 +350,6 @@ async def _(param: Arparma):
         await show_chat.finish(Text("没有找到相关记录..."), reply_to=True)
     if len(node_list) > 90:
         node_list = node_list[:90] + [Text(f"...省略{len(node_list[91:])}条对话记录")]
-    await MessageUtils.alc_forward_msg(node_list, "80000", "匿名消息").send(
+    await MessageUtils.alc_forward_msg(node_list, "80000000", "匿名消息").send(
         reply_to=True
     )
