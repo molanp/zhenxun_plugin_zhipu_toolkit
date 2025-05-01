@@ -54,7 +54,7 @@ async def str2msg(message: str) -> list:
     """
     segments = []
     message = message.removesuffix("。")
-    at_pattern = r"@UID ([^ ]+)|@[uid=([^>]+)]"
+    at_pattern = r"@UID ([^ ]+)|@\[uid=([^>]+)\]"
     last_pos = 0
 
     for match in re.finditer(at_pattern, message, re.DOTALL):
