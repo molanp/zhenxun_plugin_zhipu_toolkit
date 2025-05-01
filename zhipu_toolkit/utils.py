@@ -120,7 +120,7 @@ async def split_text(text: str) -> list[tuple[str, float]]:
     """文本切割"""
     results = []
     split_list = [
-        s for s in await __split_text(text, r"(?<!\?)[。？！\n](?!\?)", 3) if s.strip()
+        s for s in await __split_text(text, r"(?<!\?)[。？！\n](?!\?)", 3) if s.strip() or len(s) == 1
     ]
     for r in split_list:
         next_char_index = text.find(r) + len(r)
