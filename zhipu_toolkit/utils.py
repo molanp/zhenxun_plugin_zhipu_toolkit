@@ -120,13 +120,16 @@ async def split_text(text: str) -> list[tuple[str, float]]:
     """文本切割"""
     results = []
     split_list = [
-        s for s in await __split_text(text, r"(?<!\?)[。？！\n](?!\?)", 3) if s.strip()
+        s for s in await __split_text(text, r"(?<!\?)[。？！\n](?!\?)", 3)
+        if s.strip() or len(s.strip()) == 1  # 确保保留单个符号且过滤掉空白字符
     ]
     for r in split_list:
         next_char_index = text.find(r) + len(r)
-        if next_char_index < len(text) and text[next_char_index] == "？":
+        # 检查并追加连续的问号
+        while next_char_index < len(text) and text[next_char_index] == "？":
             r += "？"
-        results.append((await str2msg(r), min(len(r) * 0.2, 3.0)))
+            next_char_index += 1
+        results.append((await str2msg(r), min(len(r) * 0.2, 3.0)))  # 根据长度计算权重
     return results
 
 
