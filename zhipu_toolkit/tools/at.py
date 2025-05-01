@@ -27,4 +27,4 @@ class SpanAtMsg(Tool):
     async def _generate_at_msg(self, uid: str) -> str:
         if not uid.strip():
             raise ValueError("uid cannot be empty")
-        return f"@<uid={uid}>"
+        return f"@[uid={uid}]"
