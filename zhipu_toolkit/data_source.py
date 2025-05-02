@@ -257,6 +257,7 @@ class ChatManager:
                 session,
                 temperature=0.5,
             )
+            await cls.add_anytype_message(uid, result.message)
         logger.info(
             f"USERNAME `{username}` 问题：{message} ---- 回答：{result.content}",
             "zhipu_toolkit",
