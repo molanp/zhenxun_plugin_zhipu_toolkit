@@ -338,10 +338,15 @@ async def _(param: Arparma):
                 node_list.append(
                     i["content"],
                 )
-            elif i["role"] == "tool":
-                node_list.append(
-                    f"用户 {target} 的工具调用记录: {i['tool_calls']}",
+            if i["tool_calls"] is not None:
+                tool_calls = i["tool_calls"]
+                for func in tool_calls:
+                   f = func["function"]
+                   node_list.append(
+                    f"期望调用工具 {f['name']}(ID: {func['id']}) 参数: {f['arguments']}",
                 )
+            if i["role"] == "tool":
+                node_list.append(f"工具 {i['tool_call_id']} 调用成功:\n{i['content']}")
         else:
             node_list.append(
                 f"用户 {i[0]} 的记录数: {i[1]}",
@@ -350,6 +355,4 @@ async def _(param: Arparma):
         await show_chat.finish(Text("没有找到相关记录..."), reply_to=True)
     if len(node_list) > 90:
         node_list = node_list[:90] + [Text(f"...省略{len(node_list[91:])}条对话记录")]
-    await MessageUtils.alc_forward_msg(node_list, "80000000", "匿名消息").send(
-        reply_to=True
-    )
+    await MessageUtils.alc_forward_msg(node_list, "80000000", "匿名消息").send()

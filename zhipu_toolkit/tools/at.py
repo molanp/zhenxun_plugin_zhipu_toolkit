@@ -1,5 +1,5 @@
 from ._model import Tool
-
+from nonebot_plugin_alconna import UniMessage, At
 
 class SpanAtMsg(Tool):
     """工具类：用于在消息中@指定用户"""
@@ -8,7 +8,7 @@ class SpanAtMsg(Tool):
         super().__init__(
             name="at_user",
             description=(
-                "获取用于@指定用户UID的@消息格式字符串，"
+                "用于@指定用户UID，"
                 "用于在消息中精准@指定用户"
             ),
             parameters={
@@ -27,4 +27,5 @@ class SpanAtMsg(Tool):
     async def _generate_at_msg(self, uid: str) -> str:
         if not uid.strip():
             raise ValueError("uid cannot be empty")
-        return f"@[uid={uid}]"
+        await UniMessage(At("user", uid)).send()
+        return "已成功发送@消息"
