@@ -4,6 +4,7 @@ from nonebot import get_bot
 
 from zhenxun.utils.platform import PlatformUtils
 from zhenxun.utils.rules import ensure_group
+from zhenxun.models.ban_console import BanConsole
 
 from ._model import Tool
 
@@ -38,8 +39,6 @@ class MuteTool(Tool):
     async def Mute(
         self, session, uid: str | None = None, minute: int | None = None
     ) -> str:
-        if not ensure_group(session):
-            return "不是群组环境，不能禁言"
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
         uid = str(uid or session.user.id)
@@ -47,6 +46,12 @@ class MuteTool(Tool):
         mute_time = minute or random.randint(1, 100)
         try:
             await PlatformUtils.ban_user(bot, uid, gid, mute_time)
+            await BanConsole.ban(
+               uid,
+               None,
+               9999,
+               mute_time * 60,
+            )
             return f"禁言成功, 禁言时长: {mute_time}分钟"
         except Exception as e:
             return f"禁言失败, 原因: {e!s}"
@@ -73,13 +78,12 @@ class UnMuteTool(Tool):
         )
 
     async def UnMute(self, session, uid: str | None = None) -> str:
-        if not ensure_group(session):
-            return "不是群组环境，不能取消禁言"
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
         uid = str(uid or session.user.id)
         try:
             await PlatformUtils.ban_user(bot, uid, gid, 0)
+            await BanConsole.unban(uid)
             return "取消禁言成功"
         except Exception as e:
             return f"取消禁言失败, 原因: {e!s}"
