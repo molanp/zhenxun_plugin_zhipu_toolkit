@@ -210,7 +210,7 @@ class ChatManager:
         username = await get_username_by_session(session)
         soul = ChatConfig.get("SOUL")
         await cls.add_system_message(
-            f"消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n<SOUL>\n{soul}\n</SOUL>",
+            f"消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n***\n{soul}",
             uid,
         )
         message = await msg2str(msg)
