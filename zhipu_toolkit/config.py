@@ -65,7 +65,8 @@ async def get_prompt() -> str:
         async with aiofiles.open(PROMPT_FILE, mode='r', encoding='utf-8') as f:
             return await f.read()
     except Exception as e:
-        return f"读取失败: {e}"
+        logger.error("PROMPT读取失败，使用 DEFAULT_PROMPT", "zhipu_toolkit", e=e)
+        return DEFAULT_PROMPT
 
 class PluginConfig(BaseModel, extra=Extra.ignore):
     nickname: list[str] = ["Bot", "bot"]

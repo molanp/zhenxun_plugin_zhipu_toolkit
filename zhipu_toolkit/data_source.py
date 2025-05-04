@@ -324,7 +324,7 @@ class ChatManager:
             f"[{msg.time} USERNAME {msg.username} @UID {msg.uid}]:{msg.msg}\n\n"
             for msg in group_msg
         )
-        prompt = IMPERSONATION_HEAD.format(
+        prompt = IMPERSONATION_PROMPT.format(
            date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
            name=BotConfig.self_nickname,
            uid=session.self_id,
