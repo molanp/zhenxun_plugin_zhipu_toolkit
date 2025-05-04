@@ -51,14 +51,6 @@ class ChatConfig:
         key = key.upper()
         return Config.get_config("zhipu_toolkit", key)
 
-if not PROMPT_FILE.exists() or PROMPT_FILE.stat().st_size == 0:
-    p = ChatConfig.get("SOUL")
-    if p is not None:
-        DEFAULT_PROMPT = p.strip()
-        Config.set_config("zhipu_toolkit", "SOUL", None, True)
-        logger.info("PROMPT数据迁移成功", "zhipu_toolkit")
-    PROMPT_FILE.write_text(DEFAULT_PROMPT, encoding="utf-8")
-
 async def get_prompt() -> str:
     """从 prompt.txt 文件中读取人设信息"""
     try:

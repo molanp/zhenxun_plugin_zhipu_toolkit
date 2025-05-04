@@ -20,7 +20,7 @@ from zhenxun.models.ban_console import BanConsole
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
-from .config import ChatConfig, get_prompt, IMPERSONATION_PROMPT
+from .config import ChatConfig, get_prompt, IMPERSONATION_PROMPT, DEFAULT_PROMPT, PROMPT_FILE
 from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
@@ -166,6 +166,15 @@ async def check_task_status_from_zhipuai(task_id: str):
 class ChatManager:
     @classmethod
     async def initialize(cls) -> None:
+       # 迁移prompt
+       if not PROMPT_FILE.exists() or PROMPT_FILE.stat().st_size == 0:
+           p = ChatConfig.get("SOUL")
+           if p is not None:
+               DEFAULT_PROMPT = p.strip()
+               Config.set_config("zhipu_toolkit", "SOUL", None, True)
+               logger.info("PROMPT数据迁移成功", "zhipu_toolkit")
+           PROMPT_FILE.write_text(DEFAULT_PROMPT, encoding="utf-8")
+        # 迁移对话数据
         json_path = DATA_PATH / "zhipu_toolkit" / "chat_history.json"
         if not json_path.exists():
             return
