@@ -54,6 +54,7 @@ poetry add zhipuai
 ## ⚠️ 注意事项
 1. 本插件已包含真寻AI插件默认的`hello`功能，使用本插件前请先**卸载**真寻的AI插件
 2. 请删除`zhenxun/builtin_plugins/nickname.py`这个插件，**否则可能会与本插件冲突**
+3. Prompt请在 `/data/zhipu_toolkit/prompt.txt`中设置
 
 ## 🎉 使用
 | 命令 | 参数 | 范围 | 说明 |
@@ -78,11 +79,9 @@ poetry add zhipuai
 | `VIDEO_MODEL` | **否** | `cogvideox-flash` | 所使用的视频生成模型代码|
 | `IMAGE_UNDERSTANDING_MODEL` | **否** | `glm-4v-flash` | 所使用的图片理解模型代码 |
 | `CHAT_MODE` | **否** | `user` | 对话分组模式，支持'user','group','all' |
-| `SOUL` | **否** | `你是真寻，你强大且无所不能` | AI的自定义人格 |
 | `IMPERSONATION_MODE` | **否** | `False` | 是否启用伪人模式 |
 | `IMPERSONATION_TRIGGER_FREQUENCY` | **否** | `20` | 伪人模式触发频率[0-100] |
 | `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
-| `IMPERSONATION_SOUL` | **否** | `False` | 伪人模式的自定义人格,为`False`则同步`SOUL` |
 | `IMPERSONATION_BAN_GROUP` | **否** | `[]` | 禁用伪人模式的群组列表 |
 | `ENBALE_QBOT` | **否** | `False` | 允许QQBot使用本插件 |
 

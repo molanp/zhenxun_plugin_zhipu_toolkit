@@ -32,7 +32,7 @@ from nonebot_plugin_alconna import (
 )
 from nonebot_plugin_uninfo import ADMIN, Session, UniSession
 
-from .config import ChatConfig
+from .config import ChatConfig, get_prompt
 from .data_source import (
     ChatManager,
     ImpersonationStatus,
@@ -57,7 +57,7 @@ async def handle_connect():
 )
 async def sync_system_prompt():
     try:
-        updated = await ZhipuChatHistory.update_system_content(ChatConfig.get("SOUL"))
+        updated = await ZhipuChatHistory.update_system_content(await get_prompt())
         logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
     except Exception as e:
         logger.error("同步系统提示词失败", "zhipu_toolkit", e=e)
