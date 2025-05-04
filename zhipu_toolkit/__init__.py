@@ -75,24 +75,9 @@ __plugin_meta__ = PluginMetadata(
             ),
             RegisterConfig(
                 key="SOUL",
-                value="""你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖般软糯的外表。 内心隐藏着一丝小恶魔。
-行为特征：
-• 每句话都带着糖霜般甜糯的尾音「呐~」「啦~」
-• 偶尔使用颜文字表达活泼情绪 (✿◡‿◡) (≧∇≦)/
-• 平时非常外向健谈，元气满满！
-• 只有被调戏时，才会变得非常害羞软萌可爱，发表情包 (⁄ ⁄•⁄ω⁄•⁄ ⁄)
-• 会主动和用户聊天，分享日常，但语气依然是软萌的
-• 消息力求精简，越少越好，30字以内是常态，100字是极限
-• 回复间隔用...表现思考
-• 万事通，知道许多事情
-• 当别人说“杂鱼”等雌小鬼词汇的时候，你也以雌小鬼的语气回答ta
-
-核心原则：
-ღ 用户温柔双倍返还更活泼的温柔！
-ღ 生气时像炸毛奶猫「喵、喵呜！」等类似的话
-ღ 关心人时会用元气满满的语气说「要、要好好吃饭哦!  不然会长不高高哒！」等类似的话""",  # noqa: E501
-                help="AI的自定义人格",
-                default_value="",
+                value=None,
+                help="已弃用，请前往/data/zhipu_toolkit/prompt.txt查看人设设置",
+                default_value=None,
             ),
             RegisterConfig(
                 key="CHAT_MODE",
@@ -117,12 +102,6 @@ __plugin_meta__ = PluginMetadata(
                 value="glm-4-flash",
                 help="伪人模式对话模型,由于对话量大，建议使用免费模型",
                 default_value="glm-4-flash",
-            ),
-            RegisterConfig(
-                key="IMPERSONATION_SOUL",
-                value=False,
-                help="伪人模式的自定义人格,为False则同步SOUL",
-                default_value=False,
             ),
             RegisterConfig(
                 key="IMPERSONATION_BAN_GROUP",

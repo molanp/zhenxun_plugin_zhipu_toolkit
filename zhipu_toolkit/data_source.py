@@ -20,7 +20,7 @@ from zhenxun.models.ban_console import BanConsole
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
-from .config import ChatConfig
+from .config import ChatConfig, get_prompt, IMPERSONATION_PROMPT
 from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
@@ -208,9 +208,9 @@ class ChatManager:
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
         username = await get_username_by_session(session)
-        soul = ChatConfig.get("SOUL")
+        soul = await get_prompt()
         await cls.add_system_message(
-            f"消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n***\n{soul}",
+            f"## 消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n___\n{soul}",
             uid,
         )
         message = await msg2str(msg)
@@ -320,27 +320,24 @@ class ChatManager:
         if not (group_msg := GROUP_MSG_CACHE[gid]):
             return
 
-        content = "".join(
+        CHAT_RECORDS = "".join(
             f"[{msg.time} USERNAME {msg.username} @UID {msg.uid}]:{msg.msg}\n\n"
             for msg in group_msg
         )
-        head = f"当前时间为{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n**\n你在一个QQ群里，请你参与讨论，只能以`{BotConfig.self_nickname}(UID: {session.self_id})`的身份发言一次，不允许多次重复一样的话，不允许回应自己的消息.如果觉得此时不需要自己说话，请只回复`<EMPTY>`。\n*** 回复格式为`username(uid):message`***\n下面是群组的聊天记录：\n***"  # noqa: E501
-        soul = (
-            ChatConfig.get("SOUL")
-            if ChatConfig.get("IMPERSONATION_SOUL") is False
-            else ChatConfig.get("IMPERSONATION_SOUL")
+        prompt = IMPERSONATION_HEAD.format(
+           date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+           name=BotConfig.self_nickname,
+           uid=session.self_id,
+           soul=await get_prompt(),
+           CHAT_RECORDS=CHAT_RECORDS
         )
         result = await cls.get_zhipu_result(
             await get_request_id(),
             ChatConfig.get("IMPERSONATION_MODEL"),
             [
                 {
-                    "role": "system",
-                    "content": soul,
-                },
-                {
                     "role": "user",
-                    "content": head + content,
+                    "content": prompt,
                 },
             ],
             session,
