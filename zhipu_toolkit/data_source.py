@@ -170,10 +170,12 @@ class ChatManager:
        if not PROMPT_FILE.exists() or PROMPT_FILE.stat().st_size == 0:
            p = ChatConfig.get("SOUL")
            if p is not None:
-               DEFAULT_PROMPT = p.strip()
+               new_prompt = p.strip()
                Config.set_config("zhipu_toolkit", "SOUL", None, True)
                logger.info("PROMPT数据迁移成功", "zhipu_toolkit")
-           PROMPT_FILE.write_text(DEFAULT_PROMPT, encoding="utf-8")
+           else:
+               new_prompt = DEFAULT_PROMPT
+           PROMPT_FILE.write_text(new_prompt, encoding="utf-8")
         # 迁移对话数据
         json_path = DATA_PATH / "zhipu_toolkit" / "chat_history.json"
         if not json_path.exists():
