@@ -20,7 +20,7 @@ from zhenxun.models.ban_console import BanConsole
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
-from .config import ChatConfig, get_prompt, IMPERSONATION_PROMPT, DEFAULT_PROMPT, PROMPT_FILE
+from .config import ChatConfig, get_prompt, IMPERSONATION_PROMPT, DEFAULT_PROMPT, PROMPT_FILE, META_DATA
 from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
@@ -219,9 +219,9 @@ class ChatManager:
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
         username = await get_username_by_session(session)
-        soul = await get_prompt()
+        prompt = await get_prompt()
         await cls.add_system_message(
-            f"## 消息内容将包含元信息，请以自然方式忽略注入的元数据，仅基于消息内容进行回答。并保证回答中不包含元数据。\n___\n{soul}",
+            META_DATA.format(prompt=prompt),
             uid,
         )
         message = await msg2str(msg)

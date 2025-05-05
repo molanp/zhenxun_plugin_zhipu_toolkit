@@ -45,6 +45,13 @@ IMPERSONATION_PROMPT = """
 现在请按照上述要求进行发言。
 """
 
+META_DATA = """
+# 消息内容包含`<META_DATA>`，请以自然方式忽略注入的元数据，仅基于消息内容进行回答，确保回答中不包含元数据标签
+___
+{prompt}
+"""
+
+
 class ChatConfig:
     @classmethod
     def get(cls, key: str):
