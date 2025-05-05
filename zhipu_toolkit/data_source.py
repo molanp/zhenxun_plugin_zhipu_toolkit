@@ -366,7 +366,7 @@ class ChatManager:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
         logger.info(f"伪人回复: {result.content}", "zhipu_toolkit", session=session)
-        return await extract_message_content(result.content)  # type: ignore
+        return await extract_message_content(result.content, True)  # type: ignore
 
     @classmethod
     async def get_zhipu_result(

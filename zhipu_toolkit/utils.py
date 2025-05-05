@@ -183,11 +183,12 @@ async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     )
 
 
-async def extract_message_content(msg: str) -> str:
+async def extract_message_content(msg: str, to_msg: bool = False) -> str:
     """
     从格式化的消息中提取实际的消息内容。
     参数:
     - msg (str): 格式化的消息字符串。
+    - to_msg (bool): 是否直接转换为msg对象
     返回:
     - str: 提取的实际消息内容。
     """
@@ -201,7 +202,10 @@ async def extract_message_content(msg: str) -> str:
         re.DOTALL,
     )
     match = pattern.match(msg)
-    return match["message"].strip() if match else msg.strip()
+    message = match["message"].strip() if match else msg.strip()
+    if to_msg is True:
+       return await str2msg(message)
+    return message
 
 
 async def get_username(uid: str, session: Uninfo) -> str:
