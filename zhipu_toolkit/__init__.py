@@ -1,4 +1,3 @@
-from email.policy import default
 from nonebot.plugin import PluginMetadata
 
 from zhenxun.configs.config import BotConfig
