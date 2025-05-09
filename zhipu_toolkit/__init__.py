@@ -1,3 +1,4 @@
+from email.policy import default
 from nonebot.plugin import PluginMetadata
 
 from zhenxun.configs.config import BotConfig
@@ -74,12 +75,6 @@ __plugin_meta__ = PluginMetadata(
                 default_value="glm-4v-flash",
             ),
             RegisterConfig(
-                key="SOUL",
-                value=None,
-                help="已弃用，请前往/data/zhipu_toolkit/prompt.txt查看人设设置",
-                default_value=None,
-            ),
-            RegisterConfig(
                 key="CHAT_MODE",
                 value="user",
                 help="对话分组模式，支持'user','group','all'",
@@ -113,6 +108,7 @@ __plugin_meta__ = PluginMetadata(
                 key="ENBALE_QBOT",
                 value=False,
                 help="允许QQ官方Bot调用本插件",
+                default_value=False,
             )
         ],
     ).dict(),
