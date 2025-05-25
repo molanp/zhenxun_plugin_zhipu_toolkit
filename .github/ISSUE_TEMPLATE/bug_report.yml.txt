@@ -1,0 +1,56 @@
+name: Bug反馈/Bug report
+description: 在这里提交你遇到的任何问题/Submit any issues you encounter here
+title: "[Bug]: "
+labels: ["bug", "triage"]
+projects: ["octo-org/1", "octo-org/44"]
+assignees:
+  - octocat
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请填写以下信息，以便我们能够快速地修复它/Please fill in the information below so that we can fix it quickly
+  - type: input
+    id: describe-the-bug
+    attributes:
+      label: 问题描述/Problem description
+      required: true
+  - type: input
+    id: steps-to-reproduce
+    attributes:
+      label: 复现步骤/Steps to reproduce
+      required: true
+  - type: input
+    id: expected-behavior
+    attributes:
+      label: 预期行为/Expected behavior
+      description: 期望发生的行为的清晰而简明的描述/A clear and concise description of the behavior that is expected to occur
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 日志/log
+      description: 请将日志粘贴到此/Please paste the logs here
+  - type: input
+    id: platform
+    attributes:
+      label: 系统架构/System architecture
+      placeholder: [e.g. Windows 10/11]
+      required: true
+  - type: input
+    id: mcsmapi-version
+    attributes:
+      label: zhipu_toolkit 插件版本/plugin: zhipu_toolkit version
+      placeholder: [e.g. 0.1.4]
+      required: true
+  - type: input
+    id: python-version
+    attributes:
+      label: Python 版本/Python version
+      placeholder: [e.g. 3.10.1]
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息/Additional Information
+      description: 在这里添加关于问题的其他相关信息/Add additional relevant information about the issue here
