@@ -12,7 +12,7 @@ from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.rules import ensure_group
 
 from .model import ZhipuChatHistory
-from .utils import split_text
+from .utils import split_text, get_request_id
 
 require("nonebot_plugin_alconna")
 from nonebot.adapters import Bot, Event
@@ -37,9 +37,8 @@ from .data_source import (
     ChatManager,
     ImpersonationStatus,
     cache_group_message,
-    check_task_status_periodically,
+    check_video_task_status,
     hello,
-    submit_task_to_zhipuai,
 )
 from .rule import enable_qbot, is_to_me
 
@@ -144,63 +143,61 @@ show_chat = on_alconna(
 async def _(result: Arparma):
     if not result.find("msg"):
         await draw_pic.finish(Text("虚空绘画？内容呢？"), reply_to=True)
+    
     if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
-    else:
-        prompt = " ".join(map(str, result.query("msg")))  # type: ignore
-        try:
-            loop = asyncio.get_running_loop()
-            client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-            response = await loop.run_in_executor(
-                None,
-                lambda: client.images.generations(
-                    model=ChatConfig.get("PIC_MODEL"),
-                    prompt=prompt,
-                    size=result.query("size"),
-                ),
-            )
-            await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
-        except Exception as e:
-            await draw_pic.send(Text(f"错了：{e}"), reply_to=True)
+        return
+
+    prompt = " ".join(map(str, result.query("msg")))  # type: ignore
+
+    try:
+        client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
+        response = await asyncio.to_thread(
+            client.images.generations,
+            model=ChatConfig.get("PIC_MODEL"),
+            prompt=prompt,
+            size=result.query("size"),
+        )
+        await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
+    except Exception as e:
+
+        await draw_pic.send(Text(f"错误：{e}"), reply_to=True)
 
 
 @draw_video.handle()
 async def _(result: Arparma):
     if not result.find("msg"):
         await draw_video.finish(Text("虚空生成？内容呢？"), reply_to=True)
-    if ChatConfig.get("API_KEY") == "":
+
+    if not ChatConfig.get("API_KEY"):
         await draw_video.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
-    else:
-        try:
-            result_list = result.query("msg")
-            non_image_str = " ".join(
-                str(x)
-                for x in result_list  # type: ignore
-                if not isinstance(x, Image)  # type: ignore
-            )
-            image_url = next(
-                (
-                    x.url.replace("https", "http")  # type: ignore
-                    for x in result_list  # type: ignore
-                    if isinstance(x, Image)
-                ),
-                "",
-            )
-            response = await submit_task_to_zhipuai(non_image_str, image_url)
-        except Exception as e:
-            await draw_video.send(Text(str(e)))
-        else:
-            if response.task_status != "FAIL":
-                await draw_video.send(
-                    Text(f"任务已提交,id: {response.id}"), reply_to=True
-                )
-                asyncio.create_task(  # noqa: RUF006
-                    check_task_status_periodically(response.id, draw_video)  # type: ignore
-                )
-            else:
-                await draw_video.send(
-                    Text(f"任务提交失败，e:{response}"), reply_to=True
-                )
+        return
+
+    try:
+        result_list = result.query("msg")
+        non_image_str = " ".join(str(x) for x in result_list if not isinstance(x, Image))
+        image_url = next((x.url.replace("https", "http") for x in result_list if isinstance(x, Image)), "")
+
+        client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
+        response = await asyncio.to_thread(
+            client.videos.generations,
+            model=ChatConfig.get("VIDEO_MODEL"),
+            image_url=image_url,
+            prompt=non_image_str,
+            with_audio=True,
+            request_id=await get_request_id(),
+        )
+
+        if response.task_status == "FAIL":
+            await draw_video.send(Text(f"任务提交失败，错误详情: {response}"), reply_to=True)
+            return
+
+        await draw_video.send(Text(f"任务已提交, id: {response.id}"), reply_to=True)
+
+        asyncio.create_task(check_video_task_status(response.id, draw_video))
+
+    except Exception as e:
+        await draw_video.send(Text(f"错误：{e}"), reply_to=True)
 
 
 @byd_mode.handle()
