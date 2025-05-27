@@ -81,30 +81,6 @@ async def cache_group_message(
         GROUP_MSG_CACHE[gid] = [msg]
 
 
-async def submit_task_to_zhipuai(message: str, image_url: str = ""):
-    """
-    异步提交视频生成任务到ZhipuAI。
-
-    该函数使用聊天配置中的API密钥初始化ZhipuAI客户端，
-    然后使用指定的视频模型和提示生成视频。
-
-    参数:
-    - message: str - 视频生成的提示。
-    - image_url: str | None - 视频生成参考的图片
-
-    返回:
-    - 无
-    """
-    client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-    return client.videos.generations(
-        model=ChatConfig.get("VIDEO_MODEL"),
-        image_url=image_url,
-        prompt=message,
-        with_audio=True,
-        request_id=await get_request_id(),
-    )
-
-
 async def hello() -> list:
     """一些打招呼的内容"""
     result = random.choice(
@@ -120,47 +96,26 @@ async def hello() -> list:
     return [result, IMAGE_PATH / "zai" / img]
 
 
-async def check_task_status_periodically(task_id: str, action) -> None:
-    """
-    定期检查任务状态的异步函数。
-
-    参数:
-    - task_id (str): 任务的唯一标识符。
-    - action: 执行动作的对象，用于发送消息。
-
-    返回:
-    - None
-    """
+async def check_video_task_status(task_id: str, action):
+    """定期检查视频生成任务状态，并在任务完成后自动结束"""
     while True:
         try:
-            response = await check_task_status_from_zhipuai(task_id)
-        except Exception as e:
-            await action.send(Text(str(e)), reply_to=True)
-            break
-        else:
+            client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
+            response = await asyncio.to_thread(client.videos.retrieve_videos_result, id=task_id)
+
             if response.task_status == "SUCCESS":
                 await action.send(Video(url=response.video_result[0].url))
-                break
+                return
+
             elif response.task_status == "FAIL":
-                await action.send(Text("生成失败了.: ."), reply_to=True)
-                break
+                await action.send(Text("生成失败了。"), reply_to=True)
+                return
+
             await asyncio.sleep(2)
 
-
-async def check_task_status_from_zhipuai(task_id: str):
-    """
-    异步获取指定任务的处理状态。
-
-    本函数通过调用ZhipuAI的API来查询给定任务ID的任务处理状态，主要用于视频处理任务的查询。
-
-    参数:
-    task_id (str): 需要查询处理状态的任务ID。
-
-    返回:
-    返回ZhipuAI的API调用结果，包含任务的详细处理状态信息。
-    """
-    client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-    return client.videos.retrieve_videos_result(id=task_id)
+        except Exception as e:
+            await action.send(Text(f"{type(e)}: {e}"), reply_to=True)
+            return
 
 
 class ChatManager:
