@@ -36,7 +36,7 @@ class RoleValidator(Validator):
 class ZhipuChatHistory(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     """自增id"""
-    uid = fields.TextField(description="用户唯一标识符（类型+用户ID组合）")
+    uid = fields.CharField(255, description="用户唯一标识符（类型+用户ID组合）")
     """用户id"""
     role = fields.CharField(
         16, description="消息的角色信息", validators=[RoleValidator()]
