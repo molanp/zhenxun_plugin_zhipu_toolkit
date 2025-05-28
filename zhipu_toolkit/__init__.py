@@ -108,6 +108,12 @@ __plugin_meta__ = PluginMetadata(
                 value=False,
                 help="允许QQ官方Bot调用本插件",
                 default_value=False,
+            ),
+            RegisterConfig(
+                key="SOUL",
+                value=None,
+                help="已弃用",
+                default_value=None
             )
         ],
     ).dict(),
