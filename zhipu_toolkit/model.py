@@ -127,7 +127,8 @@ class ZhipuChatHistory(Model):
     @classmethod
     async def delete_old_records(cls, days: int) -> int:
         """删除 n 天前的所有数据，保留 role='system'，但如果某个 uid 仅剩 system，则删除该 uid 的所有记录"""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        from datetime import timezone
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     
         async with in_transaction():
             # 删除 n 天前的所有非 `system` 记录
