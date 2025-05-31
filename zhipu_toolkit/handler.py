@@ -60,8 +60,6 @@ async def sync_system_prompt():
         logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
     except Exception as e:
         logger.error("同步系统提示词失败", "zhipu_toolkit", e=e)
-    finally:
-        return
 
 
 @scheduler.scheduled_job(
