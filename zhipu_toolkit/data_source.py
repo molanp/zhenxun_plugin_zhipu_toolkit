@@ -56,7 +56,7 @@ async def cache_group_message(
     """
     msg = await msg2str(message)
     if len(msg) > 255:
-        logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit")
+        logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit", session=session)
         return
     if self_name is not None:
         msg = GroupMessageModel(
@@ -74,11 +74,11 @@ async def cache_group_message(
         )
 
     gid = session.scene.id
-    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {msg}", "zhipu_toolkit")
+    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {msg}", "zhipu_toolkit", session=session)
     if gid in GROUP_MSG_CACHE:
         if len(GROUP_MSG_CACHE[gid]) >= 20:
             GROUP_MSG_CACHE[gid].pop(0)
-            logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit")
+            logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit", session=session)
 
         GROUP_MSG_CACHE[gid].append(msg)
     else:
