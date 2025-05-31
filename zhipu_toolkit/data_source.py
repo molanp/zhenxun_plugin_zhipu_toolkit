@@ -70,7 +70,7 @@ async def cache_group_message(
             msg = GroupMessageModel(
                 uid=session.user.id,
                 username=await get_username_by_session(session),
-                msg=messge,
+                msg=message,
                 time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             )
     
