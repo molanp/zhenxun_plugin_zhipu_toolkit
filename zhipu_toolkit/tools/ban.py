@@ -70,6 +70,4 @@ class UnBanTool(Tool):
 
     async def UnBan(self, session, uid: str | None = None) -> str:
         uid = str(uid or session.user.id)
-        if await BanConsole.unban(uid):
-            return "取消拉黑用户成功"
-        return "取消拉黑用户失败: 该用户不在黑名单内"
+        return "取消拉黑用户成功" if await BanConsole.unban(uid) else "取消拉黑用户失败: 该用户不在黑名单内"
