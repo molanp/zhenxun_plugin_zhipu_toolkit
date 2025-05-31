@@ -54,18 +54,22 @@ async def cache_group_message(
     返回值:
     无返回值。
     """
+    msg = await msg2str(message)
+    if len(msg) > 255:
+        logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit")
+        return
     if self_name is not None:
         msg = GroupMessageModel(
             uid=session.self_id,
             username=self_name,
-            msg=await msg2str(message),
+            msg=msg,
             time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     else:
         msg = GroupMessageModel(
             uid=session.user.id,
             username=await get_username_by_session(session),
-            msg=await msg2str(message),
+            msg=msg,
             time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
@@ -136,7 +140,8 @@ class ChatManager:
         if not json_path.exists():
             return
 
-        success = failed = 0
+        success = 0
+        failed = 0
         try:
             async with aiofiles.open(json_path, encoding="utf-8") as f:
                 old_data: dict[str, list[dict]] = ujson.loads(await f.read())
@@ -199,6 +204,7 @@ class ChatManager:
                 "zhipu_toolkit",
                 session=session,
             )
+            await ZhipuChatHistory.delete_latest_record(uid)
             return result.content  # type: ignore
         if result.error_code == 2:
             logger.error(

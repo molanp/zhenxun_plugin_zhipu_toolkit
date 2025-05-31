@@ -110,6 +110,12 @@ __plugin_meta__ = PluginMetadata(
                 default_value=False,
             ),
             RegisterConfig(
+                key="EXPIRE_DAY",
+                value=3,
+                help="用户对话记录保存时间(天), -1表示永久保存",
+                default_value=3,
+            ),
+            RegisterConfig(
                 key="SOUL",
                 value=None,
                 help="已弃用",

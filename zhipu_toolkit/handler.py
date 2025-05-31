@@ -60,6 +60,27 @@ async def sync_system_prompt():
         logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
     except Exception as e:
         logger.error("同步系统提示词失败", "zhipu_toolkit", e=e)
+    finally:
+        return
+
+
+@scheduler.scheduled_job(
+    "cron",
+    hour=0,
+    minute=0,
+)
+async def delete_expired_chat_history():
+    day = ChatConfig.get("expire_day")
+    if day == -1:
+        logger.info("跳过清理过期会话任务: 用户设置永不过期", "zhipu_toolkit")
+        return
+    try:
+        deleted = await ZhipuChatHistory.delete_old_records(day)
+        logger.info(f"成功清理 {deleted} 条过期会话 记录", "zhipu_toolkit")
+    except Exception as e:
+        logger.error("清理过期会话记录失败", "zhipu_toolkit", e=e)
+    finally:
+        return
 
 
 draw_pic = on_alconna(

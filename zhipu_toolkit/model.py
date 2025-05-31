@@ -5,6 +5,7 @@ from tortoise import fields
 from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
+from datetime import datetime, timedelta
 from zhipuai.types.chat.chat_completion import CompletionMessage
 
 from zhenxun.services.db_context import Model
@@ -113,3 +114,35 @@ class ZhipuChatHistory(Model):
             .values("uid", "record_count")
         )
         return [(item["uid"], item["record_count"]) for item in results]
+
+    @classmethod
+    async def delete_latest_record(cls, uid: str) -> int:
+        """删除指定用户的最新一条记录"""
+        latest_record = await cls.filter(uid=uid).order_by("-id").first()
+        if latest_record:
+            await latest_record.delete()
+            return 1
+        return 0
+
+    @classmethod
+    async def delete_old_records(cls, days: int) -> int:
+        """删除 n 天前的所有数据，保留 role='system'，但如果某个 uid 仅剩 system，则删除该 uid 的所有记录"""
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+    
+        async with in_transaction():
+            # 删除 n 天前的所有非 `system` 记录
+            deleted_count = await cls.filter(create_time__lt=cutoff_date).exclude(role="system").delete()
+    
+            # 获取所有 `uid` 列表
+            all_uids = await cls.all().values_list("uid", flat=True)
+    
+            # 统计哪些 `uid` 仅剩 `system` 记录
+            user_ids_to_delete = [
+                uid for uid in set(all_uids) if await cls.filter(uid=uid).count() == 1  # 该用户只有 1 条记录
+            ]
+    
+            # 删除 `仅剩 system` 的用户数据
+            if user_ids_to_delete:
+                deleted_count += await cls.filter(uid__in=user_ids_to_delete).delete()
+    
+        return deleted_count
