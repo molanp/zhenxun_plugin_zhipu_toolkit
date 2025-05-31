@@ -297,7 +297,7 @@ class ChatManager:
         gid = session.scene.id
         try:
             if not (group_msg := GROUP_MSG_CACHE[gid]):
-            return
+                return
         except KeyError:
             return
 
