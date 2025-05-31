@@ -68,7 +68,7 @@ async def sync_system_prompt():
     minute=0,
 )
 async def delete_expired_chat_history():
-    day = ChatConfig.get("expire_day")
+    day = ChatConfig.get("EXPIRE_DAY")
     if day == -1:
         logger.info("跳过清理过期会话任务: 用户设置永不过期", "zhipu_toolkit")
         return
@@ -77,8 +77,6 @@ async def delete_expired_chat_history():
         logger.info(f"成功清理 {deleted} 条过期会话 记录", "zhipu_toolkit")
     except Exception as e:
         logger.error("清理过期会话记录失败", "zhipu_toolkit", e=e)
-    finally:
-        return
 
 
 draw_pic = on_alconna(

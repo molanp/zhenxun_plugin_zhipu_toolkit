@@ -185,7 +185,7 @@ class ChatManager:
             uid,
         )
         message = await msg2str(msg)
-        word_limit = ChatConfig.get("word_limit")
+        word_limit = ChatConfig.get("WORD_LIMIT")
         if len(message) > word_limit:
             logger.warning(
                 f"USER {uid} USERNAME {username} 问题: {message} ---- 超出字数限制: {word_limit}",  # noqa: E501
