@@ -185,13 +185,14 @@ class ChatManager:
             uid,
         )
         message = await msg2str(msg)
-        if len(message) > 4095:
+        word_limit = ChatConfig.get("word_limit")
+        if len(message) > word_limit:
             logger.warning(
-                f"USER {uid} USERNAME {username} 问题: {message} ---- 超出最大token限制: 4095",  # noqa: E501
+                f"USER {uid} USERNAME {username} 问题: {message} ---- 超出字数限制: {word_limit}",  # noqa: E501
                 "zhipu_toolkit",
                 session=session,
             )
-            return "超出最大token限制: 4095"
+            return f"超出管理员设置的字数限制: {word_limit}"
         await cls.add_user_message(
             await format_usr_msg(username, session, message), uid
         )
