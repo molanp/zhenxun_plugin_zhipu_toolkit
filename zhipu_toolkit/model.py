@@ -5,7 +5,7 @@ from tortoise import fields
 from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zhipuai.types.chat.chat_completion import CompletionMessage
 
 from zhenxun.services.db_context import Model
@@ -124,31 +124,23 @@ class ZhipuChatHistory(Model):
             return 1
         return 0
 
-    @classmethod
+    @@classmethod
     async def delete_old_records(cls, days: int) -> int:
-        """删除 n 天前的所有数据，保留 role='system'，但如果某个 uid 仅剩 system，则删除该 uid 的所有记录"""
-        from datetime import timezone
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
-    
+        """删除 n 天前的所有非 system 记录，若某 uid 仅剩 system，则删除该 uid 的所有记录"""
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         async with in_transaction():
-            # 删除 n 天前的所有非 `system` 记录
-            deleted_count = await cls.filter(create_time__lt=cutoff_date).exclude(role="system").delete()
+            # 1) 删除旧的非 system 记录
+            deleted = await cls.filter(create_time__lt=cutoff, role__not="system").delete()
     
-            # 统计哪些 `uid` 仅剩 1 条记录（避免 N+1 查询）
-            from tortoise.functions import Count
-
-            uid_counts = await (
-                cls.all()
-                .group_by("uid")
-                .annotate(record_count=Count("id"))
-                .values("uid", "record_count")
+            # 2) 找出仍有非 system 记录的 uid
+            non_sys_uids = await (
+                cls
+                .filter(role__not="system")
+                .values_list("uid", flat=True)
+                .distinct()
             )
-            user_ids_to_delete = [
-                item["uid"] for item in uid_counts if item["record_count"] == 1
-            ]
     
-            # 删除 `仅剩 system` 的用户数据
-            if user_ids_to_delete:
-                deleted_count += await cls.filter(uid__in=user_ids_to_delete).delete()
+            # 3) 删除只剩 system 的那些 uid 的所有记录
+            deleted += await cls.filter(uid__not_in=non_sys_uids).delete()
     
-        return deleted_count
+        return deleted
