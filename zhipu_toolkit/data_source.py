@@ -2,9 +2,11 @@ import asyncio
 import datetime
 import os
 import random
-from typing import Any
-
 import aiofiles
+from typing import Any
+from nonebot import require
+require("nonebot_plugin_alconna")
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import Text, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
@@ -34,7 +36,7 @@ from .utils import (
 )
 
 GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
-
+_group_cache_lock = asyncio.Lock()
 
 async def cache_group_message(
     message: UniMsg, session: Session, self_name=None
@@ -54,31 +56,36 @@ async def cache_group_message(
     返回值:
     无返回值。
     """
-    if self_name is not None:
-        msg = GroupMessageModel(
-            uid=session.self_id,
-            username=self_name,
-            msg=await msg2str(message),
-            time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        )
-    else:
-        msg = GroupMessageModel(
-            uid=session.user.id,
-            username=await get_username_by_session(session),
-            msg=await msg2str(message),
-            time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        )
-
-    gid = session.scene.id
-    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {msg}", "zhipu_toolkit")
-    if gid in GROUP_MSG_CACHE:
-        if len(GROUP_MSG_CACHE[gid]) >= 20:
-            GROUP_MSG_CACHE[gid].pop(0)
-            logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit")
-
-        GROUP_MSG_CACHE[gid].append(msg)
-    else:
-        GROUP_MSG_CACHE[gid] = [msg]
+    async with _group_cache_lock:
+        message = await msg2str(message)
+        if len(message) > 255:
+            logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit", session=session)
+            return
+        if self_name is not None:
+            msg = GroupMessageModel(
+                uid=session.self_id,
+                username=self_name,
+                msg=message,
+                time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
+        else:
+            msg = GroupMessageModel(
+                uid=session.user.id,
+                username=await get_username_by_session(session),
+                msg=message,
+                time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
+    
+        gid = session.scene.id
+        logger.debug(f"GROUP {gid} 成功缓存聊天记录: {message}", "zhipu_toolkit", session=session)
+        if gid in GROUP_MSG_CACHE:
+            if len(GROUP_MSG_CACHE[gid]) >= 20:
+                GROUP_MSG_CACHE[gid].pop(0)
+                logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit", session=session)
+    
+            GROUP_MSG_CACHE[gid].append(msg)
+        else:
+            GROUP_MSG_CACHE[gid] = [msg]
 
 
 async def hello() -> list:
@@ -136,7 +143,8 @@ class ChatManager:
         if not json_path.exists():
             return
 
-        success = failed = 0
+        success = 0
+        failed = 0
         try:
             async with aiofiles.open(json_path, encoding="utf-8") as f:
                 old_data: dict[str, list[dict]] = ujson.loads(await f.read())
@@ -180,13 +188,14 @@ class ChatManager:
             uid,
         )
         message = await msg2str(msg)
-        if len(message) > 4095:
+        word_limit = ChatConfig.get("WORD_LIMIT")
+        if len(message) > word_limit:
             logger.warning(
-                f"USER {uid} USERNAME {username} 问题: {message} ---- 超出最大token限制: 4095",  # noqa: E501
+                f"USER {uid} USERNAME {username} 问题: {message} ---- 超出字数限制: {word_limit}",  # noqa: E501
                 "zhipu_toolkit",
                 session=session,
             )
-            return "超出最大token限制: 4095"
+            return f"超出管理员设置的字数限制: {word_limit}"
         await cls.add_user_message(
             await format_usr_msg(username, session, message), uid
         )
@@ -199,17 +208,20 @@ class ChatManager:
                 "zhipu_toolkit",
                 session=session,
             )
+            await ZhipuChatHistory.delete_latest_record(uid)
             return result.content  # type: ignore
         if result.error_code == 2:
             logger.error(
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
+            await ZhipuChatHistory.delete_latest_record(uid)
             return f"出错了: {result.content}"
         if result.message is None:
             logger.error(
                 f"Missing result.message for uid: {uid}, returning error."
                 f"Result content: {result.content}"
             )
+            await ZhipuChatHistory.delete_latest_record(uid)
             return f"出错了: {result.content}"
         await cls.add_anytype_message(uid, result.message)
         tool_result = await cls.parse_function_call(
@@ -283,7 +295,10 @@ class ChatManager:
     @classmethod
     async def impersonation_result(cls, session: Session) -> str | None:
         gid = session.scene.id
-        if not (group_msg := GROUP_MSG_CACHE[gid]):
+        try:
+            if not (group_msg := GROUP_MSG_CACHE[gid]):
+                return
+        except KeyError:
             return
 
         CHAT_RECORDS = "".join(

@@ -5,6 +5,8 @@ from tortoise import fields
 from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
+from tortoise.expressions import Subquery
+from datetime import datetime, timedelta, timezone
 from zhipuai.types.chat.chat_completion import CompletionMessage
 
 from zhenxun.services.db_context import Model
@@ -113,3 +115,27 @@ class ZhipuChatHistory(Model):
             .values("uid", "record_count")
         )
         return [(item["uid"], item["record_count"]) for item in results]
+
+    @classmethod
+    async def delete_latest_record(cls, uid: str) -> int:
+        """删除指定用户的最新一条记录"""
+        latest_record = await cls.filter(uid=uid).order_by("-id").first()
+        if latest_record:
+            await latest_record.delete()
+            return 1
+        return 0
+
+    @classmethod
+    async def delete_old_records(cls, days: int) -> int:
+        """删除 n 天前的所有非 system 记录，若某 uid 仅剩 system，则删除该 uid 的所有记录"""
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    
+        async with in_transaction():
+            # 1) 删除旧的非 system 记录
+            deleted = await cls.filter(create_time__lt=cutoff, role__not="system").delete()
+    
+            # 2) 仅删除那些 uid 只剩 system 记录的情况
+            non_sys_uids = cls.filter(role__not="system").values_list("uid", flat=True)
+            deleted += await cls.filter(uid__not_in=Subquery(non_sys_uids)).delete()
+    
+        return deleted

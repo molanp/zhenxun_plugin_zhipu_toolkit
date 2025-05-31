@@ -1,10 +1,6 @@
 import random
 
 from nonebot import get_bot
-
-from zhenxun.utils.rules import ensure_group
-from zhenxun.models.ban_console import BanConsole
-
 from ._model import Tool
 
 
@@ -23,7 +19,7 @@ class MuteTool(Tool):
                 "properties": {
                     "uid": {
                         "type": "string",
-                        "description": "目标用户UID，留空则禁言指令发起者",
+                        "description": "目标用户UID，留空则禁言对话者",
                     },
                     "minute": {
                         "type": "integer",
@@ -45,9 +41,9 @@ class MuteTool(Tool):
         mute_time = minute or random.randint(1, 100)
         try:
             await PlatformUtils.ban_user(bot, uid, gid, mute_time)
-            return f"禁言成功, 禁言时长: {mute_time}分钟"
+            return f"禁言用户成功, 禁言时长: {mute_time}分钟"
         except Exception as e:
-            return f"禁言失败, 原因: {e!s}"
+            return f"禁言用户失败, 原因: {e!s}"
 
 
 class UnMuteTool(Tool):
@@ -62,7 +58,7 @@ class UnMuteTool(Tool):
                 "properties": {
                     "uid": {
                         "type": "string",
-                        "description": "目标用户UID，留空则取消指令发起者的禁言",
+                        "description": "目标用户UID，留空则取消对话者的禁言",
                     },
                 },
                 "required": [],
@@ -76,6 +72,6 @@ class UnMuteTool(Tool):
         uid = str(uid or session.user.id)
         try:
             await PlatformUtils.ban_user(bot, uid, gid, 0)
-            return "取消禁言成功"
+            return "取消禁言用户成功"
         except Exception as e:
-            return f"取消禁言失败, 原因: {e!s}"
+            return f"取消禁言用户失败, 原因: {e!s}"

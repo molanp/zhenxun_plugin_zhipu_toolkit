@@ -5,7 +5,9 @@ import re
 import shutil
 import uuid
 
-from nonebot import get_bot
+from nonebot import get_bot, require
+require("nonebot_plugin_alconna")
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import At, Image, Text, UniMsg
 from nonebot_plugin_uninfo import Session, Uninfo
 from zhipuai import ZhipuAI

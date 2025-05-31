@@ -32,7 +32,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="1.6",
+        version="1.7",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -108,6 +108,18 @@ __plugin_meta__ = PluginMetadata(
                 value=False,
                 help="允许QQ官方Bot调用本插件",
                 default_value=False,
+            ),
+            RegisterConfig(
+                key="EXPIRE_DAY",
+                value=3,
+                help="用户对话记录保存时间(天), -1表示永久保存",
+                default_value=3,
+            ),
+            RegisterConfig(
+                key="WORD_LIMIT",
+                value=500,
+                help="单次对话消息字数限制(最大值一般为4095)",
+                default_value=500,
             ),
             RegisterConfig(
                 key="SOUL",
