@@ -117,9 +117,9 @@ __plugin_meta__ = PluginMetadata(
             ),
             RegisterConfig(
                 key="WORD_LIMIT",
-                value=500,
+                value=1000,
                 help="单次对话消息字数限制(最大值一般为4095)",
-                default_value=500,
+                default_value=1000,
             ),
             RegisterConfig(
                 key="SOUL",

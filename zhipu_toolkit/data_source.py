@@ -58,8 +58,9 @@ async def cache_group_message(
     """
     async with _group_cache_lock:
         message = await msg2str(message)
-        if len(message) > 255:
-            logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit", session=session)
+        count = len(message)
+        if count > 1000:
+            logger.warning(f"拒绝缓存此消息: 字数超限({count} > 1000)", "zhipu_toolkit", session=session)
             return
         if self_name is not None:
             msg = GroupMessageModel(
