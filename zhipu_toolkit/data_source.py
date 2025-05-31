@@ -211,12 +211,14 @@ class ChatManager:
             logger.error(
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
+            await ZhipuChatHistory.delete_latest_record(uid)
             return f"出错了: {result.content}"
         if result.message is None:
             logger.error(
                 f"Missing result.message for uid: {uid}, returning error."
                 f"Result content: {result.content}"
             )
+            await ZhipuChatHistory.delete_latest_record(uid)
             return f"出错了: {result.content}"
         await cls.add_anytype_message(uid, result.message)
         tool_result = await cls.parse_function_call(
