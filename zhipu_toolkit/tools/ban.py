@@ -49,7 +49,7 @@ class BanTool(Tool):
 
 
 class UnBanTool(Tool):
-    """取消用户禁言的工具"""
+    """取消拉黑用户的工具"""
 
     def __init__(self):
         super().__init__(

@@ -34,7 +34,7 @@ from .utils import (
 )
 
 GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
-
+_group_cache_lock = asyncio.Lock()
 
 async def cache_group_message(
     message: UniMsg, session: Session, self_name=None
@@ -54,35 +54,36 @@ async def cache_group_message(
     返回值:
     无返回值。
     """
-    msg = await msg2str(message)
-    if len(msg) > 255:
-        logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit", session=session)
-        return
-    if self_name is not None:
-        msg = GroupMessageModel(
-            uid=session.self_id,
-            username=self_name,
-            msg=msg,
-            time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        )
-    else:
-        msg = GroupMessageModel(
-            uid=session.user.id,
-            username=await get_username_by_session(session),
-            msg=msg,
-            time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        )
-
-    gid = session.scene.id
-    logger.debug(f"GROUP {gid} 成功缓存聊天记录: {msg}", "zhipu_toolkit", session=session)
-    if gid in GROUP_MSG_CACHE:
-        if len(GROUP_MSG_CACHE[gid]) >= 20:
-            GROUP_MSG_CACHE[gid].pop(0)
-            logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit", session=session)
-
-        GROUP_MSG_CACHE[gid].append(msg)
-    else:
-        GROUP_MSG_CACHE[gid] = [msg]
+    async with _group_cache_lock:
+        message = await msg2str(message)
+        if len(message) > 255:
+            logger.warning("拒绝缓存此消息: 字数超限(255)", "zhipu_toolkit", session=session)
+            return
+        if self_name is not None:
+            msg = GroupMessageModel(
+                uid=session.self_id,
+                username=self_name,
+                msg=message,
+                time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
+        else:
+            msg = GroupMessageModel(
+                uid=session.user.id,
+                username=await get_username_by_session(session),
+                msg=messge,
+                time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
+    
+        gid = session.scene.id
+        logger.debug(f"GROUP {gid} 成功缓存聊天记录: {message}", "zhipu_toolkit", session=session)
+        if gid in GROUP_MSG_CACHE:
+            if len(GROUP_MSG_CACHE[gid]) >= 20:
+                GROUP_MSG_CACHE[gid].pop(0)
+                logger.debug(f"GROUP {gid} 缓存已满，自动清理最早的记录", "zhipu_toolkit", session=session)
+    
+            GROUP_MSG_CACHE[gid].append(msg)
+        else:
+            GROUP_MSG_CACHE[gid] = [msg]
 
 
 async def hello() -> list:
