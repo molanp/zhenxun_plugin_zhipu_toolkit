@@ -293,7 +293,10 @@ class ChatManager:
     @classmethod
     async def impersonation_result(cls, session: Session) -> str | None:
         gid = session.scene.id
-        if not (group_msg := GROUP_MSG_CACHE[gid]):
+        try:
+            if not (group_msg := GROUP_MSG_CACHE[gid]):
+            return
+        except KeyError:
             return
 
         CHAT_RECORDS = "".join(
