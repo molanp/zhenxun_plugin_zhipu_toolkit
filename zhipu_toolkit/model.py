@@ -133,12 +133,17 @@ class ZhipuChatHistory(Model):
             # 删除 n 天前的所有非 `system` 记录
             deleted_count = await cls.filter(create_time__lt=cutoff_date).exclude(role="system").delete()
     
-            # 获取所有 `uid` 列表
-            all_uids = await cls.all().values_list("uid", flat=True)
-    
-            # 统计哪些 `uid` 仅剩 `system` 记录
+            # 统计哪些 `uid` 仅剩 1 条记录（避免 N+1 查询）
+            from tortoise.functions import Count
+
+            uid_counts = await (
+                cls.all()
+                .group_by("uid")
+                .annotate(record_count=Count("id"))
+                .values("uid", "record_count")
+            )
             user_ids_to_delete = [
-                uid for uid in set(all_uids) if await cls.filter(uid=uid).count() == 1  # 该用户只有 1 条记录
+                item["uid"] for item in uid_counts if item["record_count"] == 1
             ]
     
             # 删除 `仅剩 system` 的用户数据
