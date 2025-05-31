@@ -2,9 +2,11 @@ import asyncio
 import datetime
 import os
 import random
-from typing import Any
-
 import aiofiles
+from typing import Any
+from nonebot import require
+require("nonebot_plugin_alconna")
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import Text, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson

@@ -15,6 +15,7 @@ from .model import ZhipuChatHistory
 from .utils import split_text, get_request_id
 
 require("nonebot_plugin_alconna")
+require("nonebot_plugin_uninfo")
 from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
 from nonebot_plugin_alconna import (

@@ -1,4 +1,6 @@
 from nonebot.adapters import Event
+from nonebot import require
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_uninfo import Uninfo
 
 from zhenxun.utils.platform import PlatformUtils
