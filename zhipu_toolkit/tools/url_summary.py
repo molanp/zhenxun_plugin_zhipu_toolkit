@@ -29,6 +29,9 @@ class UrlSummaryTool(Tool):
         )
 
     async def summary(self, url: str) -> str:
-        res = await AsyncHttpx.get(url)
-        res = BeautifulSoup(res.text, "html.parser").get_text()
-        return res
+        try:
+            res = await AsyncHttpx.get(url)
+            res = BeautifulSoup(res.text, "html.parser").get_text()
+            return res
+        except Exception as e:
+            return f"出错了: {e}"
