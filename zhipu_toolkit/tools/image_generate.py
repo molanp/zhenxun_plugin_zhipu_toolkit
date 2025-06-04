@@ -19,10 +19,6 @@ class ImageGenTool(Tool):
                     "prompt": {
                         "type": "string",
                         "description": "要生成图片的内容",
-                    },
-                    "size": {
-                        "type": "string",
-                        "description": "生成图片的像素尺寸.需满足长宽都在512px-2048px之间 , 且为16整数倍,例如`1440x960`"
                     }
                 },
                 "required": ["prompt"],
@@ -30,7 +26,7 @@ class ImageGenTool(Tool):
             func=self.image_gen,
         )
 
-    async def image_gen(self, session, prompt: str, size:  str = "1440x960") -> str:
+    async def image_gen(self, session, prompt: str) -> str:
         gid = session.scene.id
         uid = session.user.id
         if not ensure_group(session):
@@ -46,7 +42,7 @@ class ImageGenTool(Tool):
                 client.images.generations,
                 model=ChatConfig.get("PIC_MODEL"),
                 prompt=prompt,
-                size=size,
+                size="1440x960",
             )
             await UniMessage(Image(url=response.data[0].url)).send(target=target)
             return "发送成功"

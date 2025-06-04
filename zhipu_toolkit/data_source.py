@@ -201,7 +201,10 @@ class ChatManager:
             await format_usr_msg(username, session, message), uid
         )
         result = await cls.get_zhipu_result(
-            uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
+            uid,
+            ChatConfig.get("CHAT_MODEL"),
+            await cls.get_chat_history(uid),
+            session
         )
         if result.error_code == 1:
             logger.info(
@@ -234,7 +237,7 @@ class ChatManager:
                 ChatConfig.get("CHAT_MODEL"),
                 await cls.get_chat_history(uid),
                 session,
-                temperature=0.5,
+                use_tool=False
             )
             await cls.add_anytype_message(uid, result.message)
         logger.info(
@@ -324,6 +327,7 @@ class ChatManager:
             ],
             session,
             True,
+            use_tool=False
         )
         if result.error_code == 1:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
@@ -347,14 +351,15 @@ class ChatManager:
         messages: list,
         session: Session,
         impersonation: bool = False,
-        temperature: float = 0.95,
+        use_tool: bool = True
     ) -> ZhipuResult:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
-        tools = await ToolsManager.get_tools()
+        tools = (await ToolsManager.get_tools()) if use_tool else None
+        tool_map = ToolsManager.tools_registry.keys() if use_tool else None
         logger.info(
-            f"可调用工具: {ToolsManager.tools_registry.keys()}",
+            f"可调用工具: {tool_map}",
             "zhipu_toolkit",
             session=session,
         )
@@ -366,24 +371,24 @@ class ChatManager:
                     messages=messages,
                     user_id=uid,
                     request_id=request_id,
+                    temperature=0.95,
                     tools=tools,
-                    temperature=temperature,
                     response_format={"type": "text"},
                 ),
             )
         except Exception as e:
             error = str(e)
-            if "assistant" in error:
-                await asyncio.sleep(0.5)
-                logger.warning(
-                    f"UID {uid} AI回复内容触发内容审查: 执行自动重试",
-                    "zhipu_toolkit",
-                    session=session,
-                )
-                return await cls.get_zhipu_result(
-                    uid, model, messages, session, impersonation
-                )
-            elif "user" in error:
+            # if "assistant" in error:
+            #     await asyncio.sleep(0.5)
+            #     logger.warning(
+            #         f"UID {uid} AI回复内容触发内容审查: 执行自动重试",
+            #         "zhipu_toolkit",
+            #         session=session,
+            #     )
+            #     return await cls.get_zhipu_result(
+            #         uid, model, messages, session, impersonation
+            #     )
+            if "user" in error:
                 if not impersonation:
                     logger.warning(
                         f"UID {uid} 用户输入内容触发内容审查: 封禁用户 {session.user.id} 5 分钟",  # noqa: E501
