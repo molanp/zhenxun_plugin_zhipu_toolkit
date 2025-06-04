@@ -53,7 +53,8 @@ async def handle_connect():
 
 @scheduler.scheduled_job(
     "interval",
-    minutes=5,
+    minutes=30,
+    max_instances=3
 )
 async def sync_system_prompt():
     try:
@@ -178,7 +179,6 @@ async def _(result: Arparma):
         )
         await draw_pic.send(Image(url=response.data[0].url), reply_to=True)
     except Exception as e:
-
         await draw_pic.send(Text(f"错误：{e}"), reply_to=True)
 
 
