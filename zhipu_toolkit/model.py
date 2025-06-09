@@ -127,15 +127,10 @@ class ZhipuChatHistory(Model):
 
     @classmethod
     async def delete_old_records(cls, days: int) -> int:
-        """删除 n 天前的所有非 system 记录，若某 uid 仅剩 system，则删除该 uid 的所有记录"""
+        """删除 n 天前的所有记录"""
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     
         async with in_transaction():
-            # 1) 删除旧的非 system 记录
-            deleted = await cls.filter(create_time__lt=cutoff, role__not="system").delete()
-    
-            # 2) 仅删除那些 uid 只剩 system 记录的情况
-            non_sys_uids = cls.filter(role__not="system").values_list("uid", flat=True)
-            deleted += await cls.filter(uid__not_in=Subquery(non_sys_uids)).delete()
+            deleted = await cls.filter(create_time__lt=cutoff).delete()
     
         return deleted
