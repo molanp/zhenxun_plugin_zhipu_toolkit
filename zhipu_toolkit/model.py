@@ -5,8 +5,7 @@ from tortoise import fields
 from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
-from tortoise.expressions import Subquery
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from zhipuai.types.chat.chat_completion import CompletionMessage
 
 from zhenxun.services.db_context import Model
@@ -128,7 +127,7 @@ class ZhipuChatHistory(Model):
     @classmethod
     async def delete_old_records(cls, days: int) -> int:
         """删除 n 天前的所有记录"""
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now() - timedelta(days=days)
     
         async with in_transaction():
             deleted = await cls.filter(create_time__lt=cutoff).delete()
