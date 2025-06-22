@@ -25,12 +25,14 @@ from nonebot_plugin_alconna import (
     At,
     CommandMeta,
     Image,
+    Reply,
     MultiVar,
     Text,
     UniMessage,
     UniMsg,
     on_alconna,
 )
+from nonebot_plugin_alconna.uniseg.tools import reply_fetch
 from nonebot_plugin_uninfo import ADMIN, Session, UniSession
 
 from .config import ChatConfig, get_prompt
@@ -51,11 +53,7 @@ async def handle_connect():
     await ChatManager.initialize()
 
 
-@scheduler.scheduled_job(
-    "interval",
-    minutes=30,
-    max_instances=3
-)
+@scheduler.scheduled_job("interval", minutes=30, max_instances=3)
 async def sync_system_prompt():
     try:
         updated = await ZhipuChatHistory.update_system_content(await get_prompt())
@@ -162,12 +160,12 @@ show_chat = on_alconna(
 async def _(result: Arparma):
     if not result.find("msg"):
         await draw_pic.finish(Text("虚空绘画？内容呢？"), reply_to=True)
-    
+
     if ChatConfig.get("API_KEY") == "":
         await draw_pic.send(Text("请先设置智谱AI的APIKEY!"), reply_to=True)
         return
 
-    prompt = " ".join(map(str, result.query("msg")))  # type: ignore
+    prompt = "\n".join(map(str, result.query("msg")))  # type: ignore
 
     try:
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
@@ -193,8 +191,17 @@ async def _(result: Arparma):
 
     try:
         result_list = result.query("msg")
-        non_image_str = " ".join(str(x) for x in result_list if not isinstance(x, Image))
-        image_url = next((x.url.replace("https", "http") for x in result_list if isinstance(x, Image)), "")
+        non_image_str = " ".join(
+            str(x) for x in result_list if not isinstance(x, Image)
+        )
+        image_url = next(
+            (
+                x.url.replace("https", "http")
+                for x in result_list
+                if isinstance(x, Image)
+            ),
+            "",
+        )
 
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         response = await asyncio.to_thread(
@@ -207,7 +214,9 @@ async def _(result: Arparma):
         )
 
         if response.task_status == "FAIL":
-            await draw_video.send(Text(f"任务提交失败，错误详情: {response}"), reply_to=True)
+            await draw_video.send(
+                Text(f"任务提交失败，错误详情: {response}"), reply_to=True
+            )
             return
 
         await draw_video.send(Text(f"任务已提交, id: {response.id}"), reply_to=True)
@@ -249,7 +258,7 @@ async def _(bot: Bot, msg: UniMsg, session: Session = UniSession()):
 
 
 @chat.handle()
-async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession()):
+async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSession()):
     tome, reply = await is_to_me(event)
     if tome:
         if msg.only(Text) and msg.extract_plain_text().strip() == "":
@@ -260,7 +269,14 @@ async def zhipu_chat(event: Event, msg: UniMsg, session: Session = UniSession())
         if ChatConfig.get("API_KEY") == "":
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
             return
-        result = await ChatManager.normal_chat_result(msg, session)
+        image = await reply_fetch(event, bot)
+        if isinstance(image, Reply) and not isinstance(image.msg, str):
+            image = await UniMessage.generate(message=image.msg, event=event, bot=bot)
+            for i in image:
+                if isinstance(i, Image):
+                    image = i
+                    break
+        result = await ChatManager.normal_chat_result(image + msg, session)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
             await cache_group_message(UniMessage(r), session, BotConfig.self_nickname)
@@ -356,10 +372,10 @@ async def _(param: Arparma):
             if i["tool_calls"] is not None:
                 tool_calls = i["tool_calls"]
                 for func in tool_calls:
-                   f = func["function"]
-                   node_list.append(
-                    f"期望调用工具 {f['name']}(ID: {func['id']}) 参数: {f['arguments']}",
-                )
+                    f = func["function"]
+                    node_list.append(
+                        f"期望调用工具 {f['name']}(ID: {func['id']}) 参数: {f['arguments']}",
+                    )
             if i["role"] == "tool":
                 node_list.append(f"工具 {i['tool_call_id']} 调用成功:\n{i['content']}")
         else:
