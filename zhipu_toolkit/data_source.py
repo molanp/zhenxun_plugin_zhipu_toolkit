@@ -240,12 +240,13 @@ class ChatManager:
                 use_tool=False
             )
             await cls.add_anytype_message(uid, result.message)
+        answer = await extract_message_content(result.content)
         logger.info(
-            f"USERNAME `{username}` 问题：{message} ---- 回答：{result.content}",
+            f"USERNAME `{username}` 问题：{message} ---- 回答：{answer}",
             "zhipu_toolkit",
             session=session,
         )
-        return await extract_message_content(result.content)  # type: ignore
+        return answer  # type: ignore
 
     @classmethod
     async def add_user_message(cls, content: str, uid: str) -> None:
@@ -340,6 +341,7 @@ class ChatManager:
         if result.content is not None and "<EMPTY>" in result.content:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
+        answet
         logger.info(f"伪人回复: {result.content}", "zhipu_toolkit", session=session)
         return await extract_message_content(result.content, True)  # type: ignore
 
