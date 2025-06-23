@@ -269,10 +269,11 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
         if ChatConfig.get("API_KEY") == "":
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
             return
-        image = await reply_fetch(event, bot)
+        image = ""
+        image_ = await reply_fetch(event, bot)
         if isinstance(image, Reply) and not isinstance(image.msg, str):
-            image = await UniMessage.generate(message=image.msg, event=event, bot=bot)
-            for i in image:
+            image_ = await UniMessage.generate(message=image.msg, event=event, bot=bot)
+            for i in image_:
                 if isinstance(i, Image):
                     image = i
                     break
