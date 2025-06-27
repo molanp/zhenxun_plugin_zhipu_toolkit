@@ -341,7 +341,6 @@ class ChatManager:
         if result.content is not None and "<EMPTY>" in result.content:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
-        answet
         logger.info(f"伪人回复: {result.content}", "zhipu_toolkit", session=session)
         return await extract_message_content(result.content, True)  # type: ignore
 
