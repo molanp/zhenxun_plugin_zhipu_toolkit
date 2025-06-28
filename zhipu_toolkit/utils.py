@@ -125,11 +125,11 @@ async def split_text(text: str) -> list[tuple[str, float]]:
     # 解决单个符号被忽略的问题
     if len(text.strip()) == 1:
         return [(await str2msg(text.strip()), 1.0)]
-    
+    max_split = ChatConfig.get("TEXT_MAX_SPLIT")
     split_list = [
-        s for s in await __split_text(text, r"[。？！\n]+", 3)
+        s for s in await __split_text(text, r"[。？！\n]+", max_split)
         if s.strip()
-    ]
+    ] if max_split > -1 else [ text ]
     
     for r in split_list:
         next_char_index = text.find(r) + len(r)
