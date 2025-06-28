@@ -1,11 +1,13 @@
 import asyncio
 import datetime
-from pathlib import Path
 import re
 import shutil
 import uuid
+from pathlib import Path
+from typing import overload
 
 from nonebot import get_bot, require
+
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import At, Image, Text, UniMsg
@@ -45,7 +47,7 @@ async def msg2str(msg: UniMsg) -> str:
     return message
 
 
-async def str2msg(message: str) -> list:
+async def str2msg(message: str) -> list[Text]:
     """
     将字符串消息转换为消息段列表。
 
@@ -118,26 +120,26 @@ async def __split_text(text: str, pattern: str, maxsplit: int) -> list[str]:
     return re.split(pattern, text, maxsplit)
 
 
-async def split_text(text: str) -> list[tuple[str, float]]:
+async def split_text(text: str) -> list[tuple[list[Text], float]]:
     """文本切割"""
     results = []
-    
-    # 解决单个符号被忽略的问题
-    if len(text.strip()) == 1:
-        return [(await str2msg(text.strip()), 1.0)]
     max_split = ChatConfig.get("TEXT_MAX_SPLIT")
-    split_list = [
-        s for s in await __split_text(text, r"[。？！\n]+", max_split)
-        if s.strip()
-    ] if max_split > -1 else [ text ]
-    
+    split_list = (
+        [s for s in await __split_text(text, r"[。？！\n]+", max_split) if s.strip()]
+        if max_split > -1
+        else [text]
+    )
+
+    if not split_list and text.strip():
+        split_list = [text]
+
     for r in split_list:
         next_char_index = text.find(r) + len(r)
         while next_char_index < len(text) and text[next_char_index] == "？":
             r += "？"
             next_char_index += 1
         results.append((await str2msg(r), min(len(r) * 0.2, 3.0)))
-    
+
     return results
 
 
@@ -185,13 +187,21 @@ async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     )
 
 
-async def extract_message_content(msg: str, to_msg: bool = False) -> str:
+@overload
+async def extract_message_content(msg: str) -> str: ...
+@overload
+async def extract_message_content(msg: str, to_msg: bool = True) -> list[Text]: ...
+async def extract_message_content(msg: str, to_msg: bool = False) -> str | list[Text]:
     """
-    从格式化的消息中提取实际的消息内容。
+    从格式化的消息中提取实际的消息内容
+
     参数:
+
     - msg (str): 格式化的消息字符串。
     - to_msg (bool): 是否直接转换为msg对象
+
     返回:
+
     - str: 提取的实际消息内容。
     """
     if msg is None:
@@ -206,7 +216,7 @@ async def extract_message_content(msg: str, to_msg: bool = False) -> str:
     match = pattern.match(msg)
     message = match["message"].strip() if match else msg.strip()
     if to_msg is True:
-       return await str2msg(message)
+        return await str2msg(message)
     return message
 
 
