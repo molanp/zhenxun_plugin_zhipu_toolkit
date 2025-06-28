@@ -278,8 +278,7 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
                     image = i
                     break
         result = await ChatManager.normal_chat_result(image + msg, session)
-        text_max_split = ChatConfig.get("TEXT_MAX_SPLIT")
-        for r, delay in await split_text(result, text_max_split):
+        for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
             await cache_group_message(UniMessage(r), session, BotConfig.self_nickname)
             await asyncio.sleep(delay)
