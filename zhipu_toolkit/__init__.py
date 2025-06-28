@@ -122,6 +122,12 @@ __plugin_meta__ = PluginMetadata(
                 default_value=1000,
             ),
             RegisterConfig(
+                key="TEXT_MAX_SPLIT",
+                value=3,
+                help="单次对话消息最大分割段数, 0表示无限分割, -1表示不分割",
+                default_value=3,
+            ),
+            RegisterConfig(
                 key="SOUL",
                 value=None,
                 help="已弃用",
