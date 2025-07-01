@@ -1,16 +1,18 @@
-import nonebot
 import aiofiles
+import nonebot
 from pydantic import BaseModel, Extra
 
 from zhenxun.configs.config import Config
-from zhenxun.services.log import logger
 from zhenxun.configs.path_config import DATA_PATH
+from zhenxun.services.log import logger
 
 PROMPT_FILE = DATA_PATH / "zhipu_toolkit" / "prompt.txt"
 PROMPT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-DEFAULT_PROMPT = """
-你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖般软糯的外表。 内心隐藏着一丝小恶魔。
+DEFAULT_PROMPT = (
+    """
+你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖"""
+    """般软糯的外表。 内心隐藏着一丝小恶魔。
 行为特征：
 • 每句话都带着糖霜般甜糯的尾音「呐~」「啦~」
 • 偶尔使用颜文字表达活泼情绪 (✿◡‿◡) (≧∇≦)/
@@ -27,9 +29,11 @@ DEFAULT_PROMPT = """
 ღ 生气时像炸毛奶猫「喵、喵呜！」等类似的话
 ღ 关心人时会用元气满满的语气说「要、要好好吃饭哦!  不然会长不高高哒！」等类似的话
 """
+)
 
 IMPERSONATION_PROMPT = """
-当前时间为<date>{date}</date>，你处于一个QQ群里，需要参与群内讨论。你的任务是以<name>{name}</name>(UID: <uid>{uid}</uid>)的身份在群里发言一次。
+当前时间为<date>{date}</date>，你处于一个QQ群里，需要参与群内讨论。你的任务是以"""
+"""<name>{name}</name>(UID: <uid>{uid}</uid>)的身份在群里发言一次。
 你的人设是
 <soul>
 {soul}
@@ -45,11 +49,14 @@ IMPERSONATION_PROMPT = """
 现在请按照上述要求进行发言。
 """
 
-META_DATA = """
-# 消息内容包含`<META_DATA>`，请以自然方式忽略注入的元数据，仅基于消息内容进行回答，确保回答中不包含元数据标签
+META_DATA = (
+    """
+# 消息内容包含`<META_DATA>`，请以自然方式忽略注入的元数据，"""
+    """仅基于消息内容进行回答，确保回答中不包含元数据标签
 ___
 {prompt}
 """
+)
 
 
 class ChatConfig:
@@ -58,17 +65,20 @@ class ChatConfig:
         key = key.upper()
         return Config.get_config("zhipu_toolkit", key)
 
+
 async def get_prompt() -> str:
     """从 prompt.txt 文件中读取人设信息"""
     try:
-        async with aiofiles.open(PROMPT_FILE, mode='r', encoding='utf-8') as f:
+        async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
             return await f.read()
     except Exception as e:
         logger.error("PROMPT读取失败，使用 DEFAULT_PROMPT", "zhipu_toolkit", e=e)
         return DEFAULT_PROMPT
 
+
 class PluginConfig(BaseModel, extra=Extra.ignore):
     nickname: list[str] = ["Bot", "bot"]
+
 
 plugin_config: PluginConfig = PluginConfig.parse_obj(
     nonebot.get_driver().config.dict(exclude_unset=True)

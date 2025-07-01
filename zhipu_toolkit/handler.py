@@ -12,7 +12,7 @@ from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.rules import ensure_group
 
 from .model import ZhipuChatHistory
-from .utils import split_text, get_request_id
+from .utils import get_request_id, split_text
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
@@ -25,8 +25,8 @@ from nonebot_plugin_alconna import (
     At,
     CommandMeta,
     Image,
-    Reply,
     MultiVar,
+    Reply,
     Text,
     UniMessage,
     UniMsg,
@@ -190,13 +190,13 @@ async def _(result: Arparma):
         return
 
     try:
-        result_list = result.query("msg")
+        result_list = result.query("msg") or []
         non_image_str = " ".join(
             str(x) for x in result_list if not isinstance(x, Image)
         )
         image_url = next(
             (
-                x.url.replace("https", "http")
+                str(x.url).replace("https", "http")
                 for x in result_list
                 if isinstance(x, Image)
             ),
@@ -218,11 +218,10 @@ async def _(result: Arparma):
                 Text(f"任务提交失败，错误详情: {response}"), reply_to=True
             )
             return
-
+        assert response.id is not None
         await draw_video.send(Text(f"任务已提交, id: {response.id}"), reply_to=True)
 
-        asyncio.create_task(check_video_task_status(response.id, draw_video))
-
+        return asyncio.create_task(check_video_task_status(response.id, draw_video))
     except Exception as e:
         await draw_video.send(Text(f"错误：{e}"), reply_to=True)
 
@@ -269,15 +268,22 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
         if ChatConfig.get("API_KEY") == "":
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
             return
-        image = ""
-        image_ = await reply_fetch(event, bot)
-        if isinstance(image, Reply) and not isinstance(image.msg, str):
-            image_ = await UniMessage.generate(message=image.msg, event=event, bot=bot)
-            for i in image_:
-                if isinstance(i, Image):
-                    image = i
-                    break
-        result = await ChatManager.normal_chat_result(image + msg, session)
+        msg_container = UniMessage()
+        rep = await reply_fetch(event, bot)
+        if isinstance(rep, Reply):
+            if isinstance(rep.msg, str):
+                msg_container.append(Text(f"\n> {rep.msg}"))
+            else:
+                for m in await UniMessage.generate(
+                    message=rep.msg, event=event, bot=bot
+                ):
+                    if not isinstance(m, Reply):
+                        if isinstance(m, str | Text):
+                            msg_container.append(Text(f"\n> {m}"))
+                        else:
+                            msg_container.append(m)
+        msg_container.append(msg)
+        result = await ChatManager.normal_chat_result(msg_container, session)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
             await cache_group_message(UniMessage(r), session, BotConfig.self_nickname)
@@ -375,7 +381,8 @@ async def _(param: Arparma):
                 for func in tool_calls:
                     f = func["function"]
                     node_list.append(
-                        f"期望调用工具 {f['name']}(ID: {func['id']}) 参数: {f['arguments']}",
+                        f"期望调用工具 {f['name']}(ID: {func['id']}) "
+                        f"参数: {f['arguments']}",
                     )
             if i["role"] == "tool":
                 node_list.append(f"工具 {i['tool_call_id']} 调用成功:\n{i['content']}")
@@ -386,5 +393,5 @@ async def _(param: Arparma):
     if not node_list:
         await show_chat.finish(Text("没有找到相关记录..."), reply_to=True)
     if len(node_list) > 90:
-        node_list = node_list[:90] + [Text(f"...省略{len(node_list[91:])}条对话记录")]
+        node_list = [*node_list[:90], Text(f"...省略{len(node_list[91:])}条对话记录")]
     await MessageUtils.alc_forward_msg(node_list, "80000000", "匿名消息").send()
