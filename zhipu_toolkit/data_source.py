@@ -227,7 +227,6 @@ class ChatManager:
         )
         if not getattr(result, "content", None):
             raise ValueError("Missing result.content")
-        assert result.content is not None
         if result.error_code == 1:
             logger.info(
                 f"USERNAME `{username}` 问题: {message} ---- 触发内容审查",
