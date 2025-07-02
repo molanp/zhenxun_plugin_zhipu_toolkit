@@ -218,7 +218,8 @@ async def _(result: Arparma):
                 Text(f"任务提交失败，错误详情: {response}"), reply_to=True
             )
             return
-        assert response.id is not None
+        if response.id is None:
+            raise ValueError("任务提交失败: response.id is None")
         await draw_video.send(Text(f"任务已提交, id: {response.id}"), reply_to=True)
 
         return asyncio.create_task(check_video_task_status(response.id, draw_video))
