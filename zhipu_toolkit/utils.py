@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import datetime
 from pathlib import Path
 import re
@@ -7,6 +8,8 @@ from typing import overload
 import uuid
 
 from nonebot import get_bot, require
+
+from zhenxun.utils.http_utils import AsyncHttpx
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
@@ -45,7 +48,7 @@ async def msg2str(
             assert segment.url is not None
             img_url = segment.url.replace("https://", "http://")
             if is_multimodal:
-                res = img_url
+                res = base64.b64encode(await AsyncHttpx.get_content(img_url)).decode()
             else:
                 message += (
                     f"\n![图片内容:{await generate_image_description(img_url)}]"

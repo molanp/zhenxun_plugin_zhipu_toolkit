@@ -61,7 +61,7 @@ __plugin_meta__ = PluginMetadata(
                 key="IS_MULTIMODAL",
                 value=False,
                 type=bool,
-                help="对话模型是否为多模态模型，启用后忽略图像理解模型并禁用工具调用",
+                help="对话模型是否为多模态模型，启用后忽略图像理解模型配置项",
                 default_value=False,
             ),
             RegisterConfig(

@@ -384,7 +384,7 @@ class ChatManager:
         request_id = await get_request_id()
         tools = (
             (await ToolsManager.get_tools())
-            if use_tool and not ChatConfig.get("IS_MULTIMODAL")
+            if use_tool
             else None
         )
         tool_map = ToolsManager.tools_registry.keys() if tools else None
