@@ -75,6 +75,7 @@ poetry add zhipuai
 |:-----:|:----:|:----:|:----:|
 | `API_KEY` | **是** | `None` | 智谱ai的API KEY |
 | `CHAT_MODEL` | **否** | `glm-4-flash`| 所使用的对话模型代码 |
+| `IS_MULTIMODAL` | **否** | `False` | 对话模型是否为多模态模型，启用后忽略图像理解模型并禁用工具调用 |
 | `PIC_MODEL` | **否** | `cogview-3-flash` | 所使用的图片生成模型代码 |
 | `VIDEO_MODEL` | **否** | `cogvideox-flash` | 所使用的视频生成模型代码|
 | `IMAGE_UNDERSTANDING_MODEL` | **否** | `glm-4v-flash` | 所使用的图片理解模型代码 |
@@ -84,6 +85,9 @@ poetry add zhipuai
 | `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
 | `IMPERSONATION_BAN_GROUP` | **否** | `[]` | 禁用伪人模式的群组列表 |
 | `ENBALE_QBOT` | **否** | `False` | 允许QQBot使用本插件 |
+| `EXPIRE_DAY` | **否** | `3` | 用户对话记录保存时间(天), -1表示永久保存 |
+| `WORD_LIMIT` | **否** | `1000` | 单次对话消息字数限制(最大值一般为4095) |
+| `TEXT_MAX_SPLIT` | **否** | `3` | 单次对话消息最大分割段数, 0表示无限分割, -1表示不分割 |
 
 ## ⁉️ Q&A
 - **Q:** 什么是伪人模式

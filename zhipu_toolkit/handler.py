@@ -283,7 +283,8 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
                             msg_container.append(Text(f"\n> {m}"))
                         else:
                             msg_container.append(m)
-        msg_container.append(msg)
+        for m in msg:
+            msg_container.append(m)
         result = await ChatManager.normal_chat_result(msg_container, session)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
@@ -375,7 +376,11 @@ async def _(param: Arparma):
             assert isinstance(target, str)
             if i["role"] in ["user", "assistant"]:
                 node_list.append(
-                    i["content"],
+                    (
+                        f'多模态携带图片：{i["content"][1]["image_url"]["url"]}\n----消息内容----\n{i["content"][0]["text"]}\n'
+                        if isinstance(i["content"], list)
+                        else i["content"]
+                    ),
                 )
             if i["tool_calls"] is not None:
                 tool_calls = i["tool_calls"]

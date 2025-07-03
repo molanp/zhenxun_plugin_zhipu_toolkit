@@ -10,7 +10,7 @@ from nonebot import get_bot, require
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
-from nonebot_plugin_alconna import At, Image, Text, UniMsg
+from nonebot_plugin_alconna import At, Image, Text, UniMessage
 from nonebot_plugin_uninfo import Session, Uninfo
 from zhipuai import ZhipuAI
 
@@ -33,20 +33,29 @@ async def get_request_id() -> str:
     return str(uuid.uuid4())
 
 
-async def msg2str(msg: UniMsg) -> str:
+async def msg2str(
+    msg: UniMessage, is_multimodal: bool = False
+) -> tuple[str, str | None]:
     message = ""
+    res = None
     for segment in msg:
         if isinstance(segment, At):
             message += f"@[uid={segment.target}] "
         elif isinstance(segment, Image):
             assert segment.url is not None
-            url = segment.url.replace("https://", "http://")
-            message += f"\n![图片内容:{await generate_image_description(url)}]({url})"
+            img_url = segment.url.replace("https://", "http://")
+            if is_multimodal:
+                res = img_url
+            else:
+                message += (
+                    f"\n![图片内容:{await generate_image_description(img_url)}]"
+                    f"({img_url})"
+                )
         elif isinstance(segment, Text):
             message += segment.text
         else:
             message += str(segment).replace("[reply]", "\n")
-    return message
+    return message, res
 
 
 async def str2msg(message: str) -> list[Text]:

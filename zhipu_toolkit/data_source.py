@@ -9,7 +9,7 @@ from nonebot import require
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
-from nonebot_plugin_alconna import Text, UniMsg, Video
+from nonebot_plugin_alconna import Text, UniMessage, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
 from zhipuai import ZhipuAI
@@ -67,7 +67,7 @@ async def cache_group_message(
     无返回值。
     """
     async with _group_cache_lock:
-        message = await msg2str(message_)
+        message, _ = await msg2str(message_)
         count = len(message)
         if count > 1000:
             logger.warning(
@@ -189,7 +189,7 @@ class ChatManager:
                 )
 
     @classmethod
-    async def normal_chat_result(cls, msg: UniMsg, session: Session) -> str:
+    async def normal_chat_result(cls, msg: UniMessage, session: Session) -> str:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
                 uid = session.user.id
@@ -210,7 +210,7 @@ class ChatManager:
             META_DATA.format(prompt=prompt),
             uid,
         )
-        message = await msg2str(msg)
+        message, img_url = await msg2str(msg, bool(ChatConfig.get("IS_MULTIMODAL")))
         word_limit = ChatConfig.get("WORD_LIMIT")
         if len(message) > word_limit:
             logger.warning(
@@ -220,12 +220,13 @@ class ChatManager:
             )
             return f"超出管理员设置的字数限制: {word_limit}"
         await cls.add_user_message(
-            await format_usr_msg(username, session, message), uid
+            await format_usr_msg(username, session, message), uid, img_url
         )
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
         )
         if not getattr(result, "content", None):
+            logger.warning(f"Missing result.content: {result}", "zhipu_toolkit")
             raise ValueError("Missing result.content")
         if result.error_code == 1:
             logger.info(
@@ -234,7 +235,7 @@ class ChatManager:
                 session=session,
             )
             await ZhipuChatHistory.delete_latest_record(uid)
-            return result.content
+            return result.content  # pyright: ignore[reportReturnType]
         if result.error_code == 2:
             logger.error(
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
@@ -260,7 +261,7 @@ class ChatManager:
                 session,
                 use_tool=False,
             )
-            await cls.add_anytype_message(uid, result.message) # type: ignore
+            await cls.add_anytype_message(uid, result.message)  # type: ignore
         answer = await extract_message_content(result.content)
         logger.info(
             f"USERNAME `{username}` 问题：{message} ---- 回答：{answer}",
@@ -270,11 +271,14 @@ class ChatManager:
         return answer  # type: ignore
 
     @classmethod
-    async def add_user_message(cls, content: str, uid: str) -> None:
+    async def add_user_message(
+        cls, content: str, uid: str, res_url: str | None = None
+    ) -> None:
         await ZhipuChatHistory.create(
             uid=uid,
             role="user",
             content=content,
+            res_url=res_url,
         )
 
     @classmethod
@@ -378,8 +382,12 @@ class ChatManager:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = await get_request_id()
-        tools = (await ToolsManager.get_tools()) if use_tool else None
-        tool_map = ToolsManager.tools_registry.keys() if use_tool else None
+        tools = (
+            (await ToolsManager.get_tools())
+            if use_tool and not ChatConfig.get("IS_MULTIMODAL")
+            else None
+        )
+        tool_map = ToolsManager.tools_registry.keys() if tools else None
         logger.info(
             f"可调用工具: {tool_map}",
             "zhipu_toolkit",
@@ -395,21 +403,10 @@ class ChatManager:
                     request_id=request_id,
                     temperature=0.95,
                     tools=tools,
-                    response_format={"type": "text"},
                 ),
             )
         except Exception as e:
             error = str(e)
-            # if "assistant" in error:
-            #     await asyncio.sleep(0.5)
-            #     logger.warning(
-            #         f"UID {uid} AI回复内容触发内容审查: 执行自动重试",
-            #         "zhipu_toolkit",
-            #         session=session,
-            #     )
-            #     return await cls.get_zhipu_result(
-            #         uid, model, messages, session, impersonation
-            #     )
             if "user" in error:
                 if not impersonation:
                     logger.warning(

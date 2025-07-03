@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from pydantic import BaseModel
 from tortoise import fields
@@ -49,9 +49,11 @@ class ZhipuChatHistory(Model):
     """模型推理终止的原因"""
     content = fields.TextField(null=True, default=None)
     """对话内容"""
-    tool_calls: list[dict[str, Any]] | None = fields.JSONField(null=True, default=None)  # type: ignore
+    res_url = fields.TextField(null=True, default=None)
+    """附带的多模态链接"""
+    tool_calls = fields.JSONField(null=True, default=None)
     """模型生成的应调用的函数名称和参数"""
-    tool_call_id: str | None = fields.TextField(null=True, default=None)  # type: ignore
+    tool_call_id = fields.TextField(null=True, default=None)
     """工具调用的记录"""
     create_time = fields.DatetimeField(auto_now_add=True)
     """创建时间"""
@@ -76,26 +78,39 @@ class ZhipuChatHistory(Model):
         :param uid: 用户唯一标识符
         :return: 包含所有历史记录的字典列表，格式示例：
         ```
-            [{
-                "uid": "user_id",
-                "role": "user",
-                "content": "你好",
-                "create_time": "2023-07-01 12:00:00"
-                ...
-            }]
+            [
+                {
+                    "role": "user",
+                    "content": "你好",
+                    "tool_call_id": "xxxx-xxxx-xxxx",
+                    "tool_calls": {...}
+                },
+            ...
+            ]
         ```
         """
         records = await cls.filter(uid=uid).order_by("id").all()
-        return [
+        data = []
+        data.extend(
             {
                 "role": record.role,
-                "content": record.content,
-                "finish_reason": record.finish_reason,
-                "tool_calls": record.tool_calls,
+                "content": (
+                    [
+                        {"type": "text", "text": record.content},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": record.res_url},
+                        },
+                    ]
+                    if record.res_url
+                    else record.content
+                ),
                 "tool_call_id": record.tool_call_id,
+                "tool_calls": record.tool_calls,
             }
             for record in records
-        ]
+        )
+        return data
 
     @classmethod
     async def update_system_content(cls, content: str, uid: str | None = None) -> int:
@@ -133,3 +148,7 @@ class ZhipuChatHistory(Model):
             deleted = await cls.filter(create_time__lt=cutoff).delete()
 
         return deleted
+
+    @classmethod
+    async def _run_script(cls):
+        return ["ALTER TABLE zhipu_chat_history ADD COLUMN res_url TEXT DEFAULT NULL"]

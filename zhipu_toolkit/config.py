@@ -10,8 +10,7 @@ PROMPT_FILE = DATA_PATH / "zhipu_toolkit" / "prompt.txt"
 PROMPT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_PROMPT = (
-    """
-你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖"""
+    """你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖"""
     """般软糯的外表。 内心隐藏着一丝小恶魔。
 行为特征：
 • 每句话都带着糖霜般甜糯的尾音「呐~」「啦~」
@@ -31,9 +30,9 @@ DEFAULT_PROMPT = (
 """
 )
 
-IMPERSONATION_PROMPT = """
-当前时间为<date>{date}</date>，你处于一个QQ群里，需要参与群内讨论。你的任务是以"""
-"""<name>{name}</name>(UID: <uid>{uid}</uid>)的身份在群里发言一次。
+IMPERSONATION_PROMPT = (
+    """当前时间为<date>{date}</date>，你处于一个QQ群里，需要参与群内讨论。你的任务是以"""
+    """<name>{name}</name>(UID: <uid>{uid}</uid>)的身份在群里发言一次。
 你的人设是
 <soul>
 {soul}
@@ -48,10 +47,10 @@ IMPERSONATION_PROMPT = """
 回复格式必须为`{name}({uid}):message`。
 现在请按照上述要求进行发言。
 """
+)
 
 META_DATA = (
-    """
-# 消息内容包含`<META_DATA>`，请以自然方式忽略注入的元数据，"""
+    """# 消息内容包含`<META_DATA>`，请以自然方式忽略注入的元数据，"""
     """仅基于消息内容进行回答，确保回答中不包含元数据标签
 ___
 {prompt}
