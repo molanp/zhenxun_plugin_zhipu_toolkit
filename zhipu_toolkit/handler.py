@@ -283,6 +283,7 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
                             msg_container.append(Text(f"\n> {m}"))
                         else:
                             msg_container.append(m)
+        msg_container.append(Text("\n"))
         for m in msg:
             msg_container.append(m)
         result = await ChatManager.normal_chat_result(msg_container, session)
