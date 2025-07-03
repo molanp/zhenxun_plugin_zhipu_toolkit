@@ -1,10 +1,10 @@
 import asyncio
 import datetime
+from pathlib import Path
 import re
 import shutil
-import uuid
-from pathlib import Path
 from typing import overload
+import uuid
 
 from nonebot import get_bot, require
 
@@ -44,6 +44,8 @@ async def msg2str(msg: UniMsg) -> str:
             message += f"\n![图片内容:{await generate_image_description(url)}]({url})"
         elif isinstance(segment, Text):
             message += segment.text
+        else:
+            message += str(segment).replace("[reply]", "\n")
     return message
 
 
@@ -188,10 +190,14 @@ async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
 
 
 @overload
-async def extract_message_content(msg: str) -> str: ...
+async def extract_message_content(msg: str | None) -> str: ...
 @overload
-async def extract_message_content(msg: str, to_msg: bool = True) -> list[Text]: ...
-async def extract_message_content(msg: str, to_msg: bool = False) -> str | list[Text]:
+async def extract_message_content(
+    msg: str | None, to_msg: bool = True
+) -> list[Text]: ...
+async def extract_message_content(
+    msg: str | None, to_msg: bool = False
+) -> str | list[Text]:
     """
     从格式化的消息中提取实际的消息内容
 
@@ -205,7 +211,7 @@ async def extract_message_content(msg: str, to_msg: bool = False) -> str | list[
     - str: 提取的实际消息内容。
     """
     if msg is None:
-        return
+        return ""
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
         rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
@@ -215,9 +221,7 @@ async def extract_message_content(msg: str, to_msg: bool = False) -> str | list[
     )
     match = pattern.match(msg)
     message = match["message"].strip() if match else msg.strip()
-    if to_msg is True:
-        return await str2msg(message)
-    return message
+    return await str2msg(message) if to_msg else message
 
 
 async def get_username(uid: str, session: Uninfo) -> str:

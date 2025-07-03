@@ -1,5 +1,6 @@
-from nonebot.adapters import Event
 from nonebot import require
+from nonebot.adapters import Event
+
 require("nonebot_plugin_uninfo")
 from nonebot_plugin_uninfo import Uninfo
 
