@@ -210,7 +210,7 @@ class ChatManager:
             META_DATA.format(prompt=prompt),
             uid,
         )
-        message, img_url = await msg2str(msg, ChatConfig.get("IS_MULTIMODAL"))
+        message, img_url = await msg2str(msg, bool(ChatConfig.get("IS_MULTIMODAL")))
         word_limit = ChatConfig.get("WORD_LIMIT")
         if len(message) > word_limit:
             logger.warning(

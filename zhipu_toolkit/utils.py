@@ -42,13 +42,14 @@ async def msg2str(
         if isinstance(segment, At):
             message += f"@[uid={segment.target}] "
         elif isinstance(segment, Image):
-            assert res is not None
+            assert segment.url is not None
+            img_url = segment.url.replace("https://", "http://")
             if is_multimodal:
-                res = segment.url.replace("https://", "http://")
+                res = img_url
             else:
                 message += (
-                    f"\n![图片内容:{await generate_image_description(res)}]"
-                    f"({res})"
+                    f"\n![图片内容:{await generate_image_description(img_url)}]"
+                    f"({img_url})"
                 )
         elif isinstance(segment, Text):
             message += segment.text

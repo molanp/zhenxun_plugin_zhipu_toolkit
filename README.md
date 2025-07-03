@@ -75,7 +75,7 @@ poetry add zhipuai
 |:-----:|:----:|:----:|:----:|
 | `API_KEY` | **是** | `None` | 智谱ai的API KEY |
 | `CHAT_MODEL` | **否** | `glm-4-flash`| 所使用的对话模型代码 |
-| `IS_MULTIMODAL` | **否** | `False` | 是否启用多模态功能 |
+| `IS_MULTIMODAL` | **否** | `False` | 对话模型是否为多模态模型，启用后忽略图像理解模型并禁用工具调用 |
 | `PIC_MODEL` | **否** | `cogview-3-flash` | 所使用的图片生成模型代码 |
 | `VIDEO_MODEL` | **否** | `cogvideox-flash` | 所使用的视频生成模型代码|
 | `IMAGE_UNDERSTANDING_MODEL` | **否** | `glm-4v-flash` | 所使用的图片理解模型代码 |
