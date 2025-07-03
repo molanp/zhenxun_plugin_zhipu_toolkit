@@ -376,7 +376,11 @@ async def _(param: Arparma):
             assert isinstance(target, str)
             if i["role"] in ["user", "assistant"]:
                 node_list.append(
-                    i["content"],
+                    (
+                        f'多模态携带图片：{i["content"][1]["image_url"]["url"]}\n----消息内容----\n{i["content"][0]["text"]}\n'
+                        if isinstance(i["content"], list)
+                        else i["content"]
+                    ),
                 )
             if i["tool_calls"] is not None:
                 tool_calls = i["tool_calls"]

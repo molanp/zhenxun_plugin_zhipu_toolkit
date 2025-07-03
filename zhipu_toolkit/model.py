@@ -82,7 +82,8 @@ class ZhipuChatHistory(Model):
                 {
                     "role": "user",
                     "content": "你好",
-                    "tool_call_id": "xxxx-xxxx-xxxx"
+                    "tool_call_id": "xxxx-xxxx-xxxx",
+                    "tool_calls": {...}
                 },
             ...
             ]
@@ -105,6 +106,7 @@ class ZhipuChatHistory(Model):
                     else record.content
                 ),
                 "tool_call_id": record.tool_call_id,
+                "tool_calls": record.tool_calls,
             }
             for record in records
         )
