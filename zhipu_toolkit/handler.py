@@ -378,7 +378,7 @@ async def _(param: Arparma):
             if i["role"] in ["user", "assistant"]:
                 node_list.append(
                     (
-                        f'多模态携带图片：{i["content"][1]["image_url"]["url"]}\n----消息内容----\n{i["content"][0]["text"]}\n'
+                        f'包含多模态图片，请在数据库查看\n----消息内容----\n{i["content"][0]["text"]}\n'
                         if isinstance(i["content"], list)
                         else i["content"]
                     ),
