@@ -287,6 +287,8 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
         for m in msg:
             msg_container.append(m)
         result = await ChatManager.normal_chat_result(msg_container, session)
+        if result[:3] == "出错了":
+            await UniMessage(Text(result)).finish(reply_to=True)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
             await cache_group_message(UniMessage(r), session, BotConfig.self_nickname)
