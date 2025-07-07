@@ -144,8 +144,7 @@ async def check_video_task_status(task_id: str, action):
             await asyncio.sleep(2)
 
         except Exception as e:
-            await action.send(Text(f"{type(e)}: {e}"), reply_to=True)
-            return
+            raise e
 
 
 class ChatManager:
