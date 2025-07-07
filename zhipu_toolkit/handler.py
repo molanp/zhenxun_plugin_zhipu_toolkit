@@ -269,24 +269,15 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
         if ChatConfig.get("API_KEY") == "":
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
             return
-        msg_container = UniMessage()
-        rep = await reply_fetch(event, bot)
-        if isinstance(rep, Reply):
-            if isinstance(rep.msg, str):
-                msg_container.append(Text(f"\n> {rep.msg}"))
-            else:
-                for m in await UniMessage.generate(
-                    message=rep.msg, event=event, bot=bot
-                ):
-                    if not isinstance(m, Reply):
-                        if isinstance(m, str | Text):
-                            msg_container.append(Text(f"\n> {m}"))
-                        else:
-                            msg_container.append(m)
-        msg_container.append(Text("\n"))
-        for m in msg:
-            msg_container.append(m)
-        result = await ChatManager.normal_chat_result(msg_container, session)
+        image = ""
+        image_ = await reply_fetch(event, bot)
+        if isinstance(image_, Reply) and not isinstance(image_.msg, str):
+            image_ = await UniMessage.generate(message=image_.msg, event=event, bot=bot)
+            for i in image_:
+                if isinstance(i, Image):
+                    image = i
+                    break
+        result = await ChatManager.normal_chat_result(image + msg, session)
         if result[:3] == "出错了":
             await UniMessage(Text(result)).finish(reply_to=True)
         for r, delay in await split_text(result):
