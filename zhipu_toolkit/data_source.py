@@ -226,7 +226,7 @@ class ChatManager:
         )
         if not getattr(result, "content", None):
             logger.warning(f"Missing result.content: {result}", "zhipu_toolkit")
-            raise ValueError("Missing result.content")
+            # raise ValueError("Missing result.content")
         if result.error_code == 1:
             logger.info(
                 f"USERNAME `{username}` 问题: {message} ---- 触发内容审查",
