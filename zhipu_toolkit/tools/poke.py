@@ -1,6 +1,6 @@
 import nonebot
 from ._model import Tool
-from nonebot_plugin_alconna import UniMessage, At
+from zhenxun.services.log import logger
 
 class PokeMsg(Tool):
     """工具类：用于戳一戳指定用户"""
@@ -30,13 +30,24 @@ class PokeMsg(Tool):
             raise ValueError("uid cannot be empty")
         scene = session.scene
         bot = nonebot.get_bot()
-        if scene.is_group:
-            gid = scene.id
-            await bot.call_api(
-                "group_poke", user_id=uid, group_id=gid
+        try:
+            await bot.call_api("poke", qq=uid)
+        except Exception:
+            try:
+                if scene.is_group:
+                    gid = scene.id
+                    await bot.call_api(
+                        "group_poke", user_id=uid, group_id=gid
+                        )
+                else:
+                    await bot.call_api(
+                        "friend_poke", user_id=uid
+                        )
+            except Exception:
+                logger.warning(
+                    "戳一戳发送失败，可能是协议端不支持...",
+                    "[zhipu_toolkit][tool]戳一戳",
+                    session=session,
                 )
-        else:
-            await bot.call_api(
-                "friend_poke", user_id=uid
-                )
+                return "戳一戳发送失败，可能是协议端不支持..."
         return "已成功发送戳一戳消息"
