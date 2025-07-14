@@ -96,7 +96,7 @@ async def get_username_by_session(session: Session) -> str:
     ):
         return session.member.nick
     name = session.user.name
-    return name if name != "" and name is not None else "未知用户"
+    return name.strip() if name != "" and name is not None else "未知用户"
 
 
 async def generate_image_description(url: str):
