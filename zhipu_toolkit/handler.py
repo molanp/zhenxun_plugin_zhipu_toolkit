@@ -282,7 +282,6 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
             await UniMessage(Text(result)).finish(reply_to=True)
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=reply)
-            await cache_group_message(UniMessage(r), session, BotConfig.self_nickname)
             await asyncio.sleep(delay)
     elif ensure_group(session) and await ImpersonationStatus.check(session):
         if ChatConfig.get("API_KEY") == "":
