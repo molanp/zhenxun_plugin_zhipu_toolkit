@@ -291,11 +291,6 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
             result = await ChatManager.impersonation_result(session)
             if result:
                 await UniMessage(result).send()
-                await cache_group_message(
-                    UniMessage(result),
-                    session,
-                    BotConfig.self_nickname,
-                )
     else:
         logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
 
