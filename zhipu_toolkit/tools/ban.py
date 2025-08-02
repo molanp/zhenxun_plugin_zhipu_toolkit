@@ -21,18 +21,22 @@ class BanTool(Tool):
                         "type": "string",
                         "description": "目标用户UID，留空则拉黑对话者",
                     },
+                    "reason": {
+                        "type": "string",
+                        "description": "封禁该用户的原因"
+                    },
                     "minute": {
                         "type": "integer",
                         "description": "拉黑时长（分钟），不填则随机1-100分钟",
                     },
                 },
-                "required": [],
+                "required": ["reason"],
             },
             func=self.Ban,
         )
 
     async def Ban(
-        self, session, uid: str | None = None, minute: int | None = None
+        self, session, uid: str | None = None, reason: str = "", minute: int | None = None
     ) -> str:
         uid = str(uid or session.user.id)
         mute_time = minute or random.randint(1, 100)
@@ -41,6 +45,7 @@ class BanTool(Tool):
                 uid,
                 None,
                 9999,
+                reason,
                 mute_time * 60,
             )
             return f"拉黑用户成功, 拉黑时长: {mute_time}分钟"
