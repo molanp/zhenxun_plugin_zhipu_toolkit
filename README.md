@@ -31,7 +31,7 @@
 ## 📚 插件依赖
 如果插件报错没有加载，说明真寻自动安装依赖失败了，请在Bot目录执行以下命令
 ```shell
-poetry add zhipuai
+poetry add zai-sdk
 ```
 
 ## ✨ 功能
