@@ -4,9 +4,8 @@ import re
 
 from nonebot import get_driver, on_message, require
 from nonebot_plugin_apscheduler import scheduler
-from zhipuai import ZhipuAI
+from zai import ZhipuAiClient as ZhipuAI
 
-from zhenxun.configs.config import BotConfig
 from zhenxun.services.log import logger
 from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.rules import ensure_group

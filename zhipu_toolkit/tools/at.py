@@ -1,5 +1,7 @@
+from nonebot_plugin_alconna import At, UniMessage
+
 from ._model import Tool
-from nonebot_plugin_alconna import UniMessage, At
+
 
 class SpanAtMsg(Tool):
     """工具类：用于在消息中@指定用户"""

@@ -6,7 +6,7 @@ from tortoise import fields
 from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 from tortoise.validators import Validator
-from zhipuai.types.chat.chat_completion import CompletionMessage
+from zai.types.chat.chat_completion import CompletionMessage
 
 from zhenxun.services.db_context import Model
 

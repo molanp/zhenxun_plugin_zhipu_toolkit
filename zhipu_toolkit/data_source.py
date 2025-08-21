@@ -12,8 +12,8 @@ require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import Text, UniMessage, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
-from zhipuai import ZhipuAI
-from zhipuai.types.chat.chat_completion import (
+from zai import ZhipuAiClient as ZhipuAI
+from zai.types.chat.chat_completion import (
     CompletionMessage,
     CompletionMessageToolCall,
 )
@@ -414,6 +414,7 @@ class ChatManager:
                         session.user.id,
                         session.scene.id if ensure_group(session) else None,
                         9999,
+                        "输入内容违规",
                         300,
                     )
 

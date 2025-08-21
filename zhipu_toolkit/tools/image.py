@@ -1,5 +1,7 @@
 from nonebot_plugin_alconna import Image, Target, UniMessage
+
 from zhenxun.utils.rules import ensure_group
+
 from ._model import Tool
 
 
@@ -10,8 +12,7 @@ class ImageSendTool(Tool):
         super().__init__(
             name="send_image",
             description=(
-                "通过URL发送图片给用户。"
-                "传入图片的url，返回发送结果（成功/失败原因）"
+                "通过URL发送图片给用户。传入图片的url，返回发送结果（成功/失败原因）"
             ),
             parameters={
                 "type": "object",

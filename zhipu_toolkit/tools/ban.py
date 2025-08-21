@@ -1,6 +1,7 @@
 import random
 
 from zhenxun.models.ban_console import BanConsole
+
 from ._model import Tool
 
 
@@ -21,10 +22,7 @@ class BanTool(Tool):
                         "type": "string",
                         "description": "目标用户UID，留空则拉黑对话者",
                     },
-                    "reason": {
-                        "type": "string",
-                        "description": "封禁该用户的原因"
-                    },
+                    "reason": {"type": "string", "description": "封禁该用户的原因"},
                     "minute": {
                         "type": "integer",
                         "description": "拉黑时长（分钟），不填则随机1-100分钟",
@@ -36,7 +34,11 @@ class BanTool(Tool):
         )
 
     async def Ban(
-        self, session, uid: str | None = None, reason: str = "", minute: int | None = None
+        self,
+        session,
+        uid: str | None = None,
+        reason: str = "",
+        minute: int | None = None,
     ) -> str:
         uid = str(uid or session.user.id)
         mute_time = minute or random.randint(1, 100)
@@ -75,4 +77,8 @@ class UnBanTool(Tool):
 
     async def UnBan(self, session, uid: str | None = None) -> str:
         uid = str(uid or session.user.id)
-        return "取消拉黑用户成功" if await BanConsole.unban(uid) else "取消拉黑用户失败: 该用户不在黑名单内"
+        return (
+            "取消拉黑用户成功"
+            if await BanConsole.unban(uid)
+            else "取消拉黑用户失败: 该用户不在黑名单内"
+        )

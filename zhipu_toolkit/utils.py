@@ -15,7 +15,7 @@ require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import At, Image, Text, UniMessage
 from nonebot_plugin_uninfo import Session, Uninfo
-from zhipuai import ZhipuAI
+from zai import ZhipuAiClient as ZhipuAI
 
 from zhenxun.configs.config import BotConfig
 from zhenxun.services.log import logger

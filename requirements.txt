@@ -1,1 +1,1 @@
-zhipuai
+zai-sdk
