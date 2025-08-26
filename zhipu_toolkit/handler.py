@@ -44,6 +44,8 @@ from .data_source import (
 )
 from .rule import enable_qbot, is_to_me
 
+INIT = True
+
 driver = get_driver()
 
 
@@ -209,7 +211,7 @@ async def _(result: Arparma):
             image_url=image_url,
             prompt=non_image_str,
             with_audio=True,
-            request_id=await get_request_id(),
+            request_id=get_request_id(),
         )
 
         if response.task_status == "FAIL":
@@ -261,7 +263,7 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
     tome, reply = await is_to_me(event)
     if tome:
         if msg.only(Text) and msg.extract_plain_text().strip() == "":
-            result = await hello()
+            result = hello()
             await UniMessage([Text(result[0]), Image(path=result[1])]).finish(
                 reply_to=True
             )

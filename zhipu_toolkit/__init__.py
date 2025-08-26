@@ -3,16 +3,7 @@ from nonebot.plugin import PluginMetadata
 from zhenxun.configs.config import BotConfig
 from zhenxun.configs.utils import PluginExtraData, RegisterConfig
 
-from .handler import (
-    chat,  # noqa: F401
-    clear_all_chat,  # noqa: F401
-    clear_chat,  # noqa: F401
-    clear_group_chat,  # noqa: F401
-    clear_my_chat,  # noqa: F401
-    draw_pic,  # noqa: F401
-    draw_video,  # noqa: F401
-    show_chat,  # noqa: F401
-)
+from .handler import INIT as INIT
 
 __plugin_meta__ = PluginMetadata(
     name="AI全家桶",
@@ -32,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="2.2",
+        version="2.3",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令

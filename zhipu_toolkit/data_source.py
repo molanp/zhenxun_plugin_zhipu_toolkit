@@ -86,7 +86,7 @@ async def cache_group_message(
         else:
             msg = GroupMessageModel(
                 uid=session.user.id,
-                username=await get_username_by_session(session),
+                username=get_username_by_session(session),
                 msg=message,
                 time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             )
@@ -109,7 +109,7 @@ async def cache_group_message(
             GROUP_MSG_CACHE[gid] = [msg]
 
 
-async def hello() -> list:
+def hello() -> list:
     """一些打招呼的内容"""
     result = random.choice(
         [
@@ -203,7 +203,7 @@ class ChatManager:
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
-        username = await get_username_by_session(session)
+        username = get_username_by_session(session)
         prompt = await get_prompt()
         await cls.add_system_message(
             META_DATA.format(prompt=prompt),
@@ -219,7 +219,7 @@ class ChatManager:
             )
             return f"超出管理员设置的字数限制: {word_limit}"
         await cls.add_user_message(
-            await format_usr_msg(username, session, message), uid, img_url
+            format_usr_msg(username, session, message), uid, img_url
         )
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
@@ -258,13 +258,14 @@ class ChatManager:
                 use_tool=False,
             )
             await cls.add_anytype_message(uid, result.message)  # type: ignore
-        answer = await extract_message_content(result.content)
+        answer = extract_message_content(result.content)
+        assert isinstance(answer, str)
         logger.info(
             f"USERNAME `{username}` 问题：{message} ---- 回答：{answer}",
             "zhipu_toolkit",
             session=session,
         )
-        return answer  # type: ignore
+        return answer
 
     @classmethod
     async def add_user_message(
@@ -339,7 +340,7 @@ class ChatManager:
             CHAT_RECORDS=CHAT_RECORDS,
         )
         result = await cls.get_zhipu_result(
-            await get_request_id(),
+            get_request_id(),
             ChatConfig.get("IMPERSONATION_MODEL"),
             [
                 {
@@ -354,16 +355,19 @@ class ChatManager:
         if result.error_code == 1:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
             return
+        answer = result.content
         if result.error_code == 2:
             logger.error(
-                f"伪人获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
+                f"伪人获取结果失败 e:{answer}", "zhipu_toolkit", session=session
             )
             return
-        if result.content is not None and "<EMPTY>" in result.content:
+        if answer is not None and "<EMPTY>" in answer:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
-        logger.info(f"伪人回复: {result.content}", "zhipu_toolkit", session=session)
-        return await extract_message_content(result.content)
+        logger.info(f"伪人回复: {answer}", "zhipu_toolkit", session=session)
+        answer =  extract_message_content(answer)
+        assert isinstance(answer, str)
+        return answer
 
     @classmethod
     async def get_zhipu_result(
@@ -377,12 +381,8 @@ class ChatManager:
     ) -> ZhipuResult:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-        request_id = await get_request_id()
-        tools = (
-            (await ToolsManager.get_tools())
-            if use_tool
-            else None
-        )
+        request_id =  get_request_id()
+        tools = (await ToolsManager.get_tools()) if use_tool else None
         tool_map = ToolsManager.tools_registry.keys() if tools else None
         logger.info(
             f"可调用工具: {tool_map}",

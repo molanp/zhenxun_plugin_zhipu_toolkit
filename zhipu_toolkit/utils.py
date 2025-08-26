@@ -4,7 +4,6 @@ import datetime
 from pathlib import Path
 import re
 import shutil
-from typing import overload
 import uuid
 
 from nonebot import get_bot, require
@@ -26,7 +25,7 @@ from .config import ChatConfig
 from .model import ZhipuChatHistory
 
 
-async def get_request_id() -> str:
+def get_request_id() -> str:
     """
     获取请求ID。
 
@@ -61,7 +60,7 @@ async def msg2str(
     return message, res
 
 
-async def str2msg(message: str) -> list[Text]:
+def str2msg(message: str) -> list[Text]:
     """
     将字符串消息转换为消息段列表。
 
@@ -87,7 +86,7 @@ async def str2msg(message: str) -> list[Text]:
     return segments
 
 
-async def get_username_by_session(session: Session) -> str:
+def get_username_by_session(session: Session) -> str:
     if (
         hasattr(session.member, "nick")
         and session.member is not None
@@ -152,7 +151,7 @@ async def split_text(text: str) -> list[tuple[list[Text], float]]:
         while next_char_index < len(text) and text[next_char_index] == "？":
             r += "？"
             next_char_index += 1
-        results.append((await str2msg(r), min(len(r) * 0.2, 3.0)))
+        results.append((str2msg(r), min(len(r) * 0.2, 3.0)))
 
     return results
 
@@ -189,7 +188,7 @@ async def migrate_user_data(uid: str, messages: list[dict]) -> bool:
         return False
 
 
-async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
+def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     """\n"""
     return (
         "<META_DATA>\n"
@@ -201,15 +200,7 @@ async def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     )
 
 
-@overload
-async def extract_message_content(msg: str | None) -> str: ...
-@overload
-async def extract_message_content(
-    msg: str | None, to_msg: bool = True
-) -> list[Text]: ...
-async def extract_message_content(
-    msg: str | None, to_msg: bool = False
-) -> str | list[Text]:
+def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list[Text]:
     """
     从格式化的消息中提取实际的消息内容
 
@@ -224,6 +215,8 @@ async def extract_message_content(
     """
     if msg is None:
         return ""
+    # 去除开头的空白字符，包括换行符
+    msg = msg.lstrip()
     pattern = re.compile(
         rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
         rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
@@ -231,9 +224,9 @@ async def extract_message_content(
         rf"(?P<message>.*)$",  # 捕获消息内容
         re.DOTALL,
     )
-    match = pattern.match(msg)
+    match = pattern.match(msg.strip())
     message = match["message"].strip() if match else msg.strip()
-    return await str2msg(message) if to_msg else message
+    return str2msg(message) if to_msg else message
 
 
 async def get_username(uid: str, session: Uninfo) -> str:
