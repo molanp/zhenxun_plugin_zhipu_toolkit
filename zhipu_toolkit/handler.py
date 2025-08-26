@@ -363,13 +363,12 @@ async def _(param: Arparma):
     for i in data:
         if isinstance(i, dict):
             assert isinstance(target, str)
-            if i["role"] in ["user", "assistant"]:
+            content = i["content"]
+            if i["role"] in ["user", "assistant"] and content:
                 node_list.append(
-                    (
-                        f'包含多模态图片，请在数据库查看\n----消息内容----\n{i["content"][0]["text"]}\n'
-                        if isinstance(i["content"], list)
-                        else i["content"]
-                    ),
+                    f'包含多模态图片，请在数据库查看\n----消息内容----\n{content[0]["text"]}\n'
+                    if isinstance(content, list)
+                    else content
                 )
             if i["tool_calls"] is not None:
                 tool_calls = i["tool_calls"]
