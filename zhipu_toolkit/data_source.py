@@ -397,7 +397,8 @@ class ChatManager:
                     messages=messages,
                     user_id=uid,
                     request_id=request_id,
-                    temperature=0.95,
+                    temperature=0.6,
+                    top_p=0.95,
                     tools=tools,
                 ),
             )
