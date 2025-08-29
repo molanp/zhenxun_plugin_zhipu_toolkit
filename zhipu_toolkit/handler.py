@@ -289,9 +289,7 @@ async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSessi
             return
         await cache_group_message(msg, session)
         if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
-            result = await ChatManager.impersonation_result(session)
-            if result:
-                await UniMessage(result).send()
+            return asyncio.create_task(ChatManager.call_impersonation_ai(session))
     else:
         logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
 
@@ -366,7 +364,7 @@ async def _(param: Arparma):
             content = i["content"]
             if i["role"] in ["user", "assistant"] and content:
                 node_list.append(
-                    f'包含多模态图片，请在数据库查看\n----消息内容----\n{content[0]["text"]}\n'
+                    f"包含多模态图片，请在数据库查看\n----消息内容----\n{content[0]['text']}\n"
                     if isinstance(content, list)
                     else content
                 )

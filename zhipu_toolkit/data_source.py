@@ -9,14 +9,11 @@ from nonebot import require
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
-from nonebot_plugin_alconna import Text, UniMessage, UniMsg, Video
+from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, UniMsg, Video
 from nonebot_plugin_uninfo import Session
 import ujson
 from zai import ZhipuAiClient as ZhipuAI
-from zai.types.chat.chat_completion import (
-    CompletionMessage,
-    CompletionMessageToolCall,
-)
+from zai.types.chat.chat_completion import CompletionMessage, CompletionMessageToolCall
 
 from zhenxun.configs.config import BotConfig, Config
 from zhenxun.configs.path_config import DATA_PATH, IMAGE_PATH
@@ -69,9 +66,9 @@ async def cache_group_message(
     async with _group_cache_lock:
         message, _ = await msg2str(message_)
         count = len(message)
-        if count > 1000:
+        if count > 500:
             logger.warning(
-                f"拒绝缓存此消息: 字数超限({count} > 1000)",
+                f"拒绝缓存此消息: 字数超限({count} > 500)",
                 "zhipu_toolkit",
                 session=session,
             )
@@ -124,7 +121,7 @@ def hello() -> list:
     return [result, IMAGE_PATH / "zai" / img]
 
 
-async def check_video_task_status(task_id: str, action):
+async def check_video_task_status(task_id: str, action: type[AlconnaMatcher]):
     """定期检查视频生成任务状态，并在任务完成后自动结束"""
     while True:
         try:
@@ -320,7 +317,7 @@ class ChatManager:
         return await ZhipuChatHistory.get_history(uid)
 
     @classmethod
-    async def impersonation_result(cls, session: Session) -> str | None:
+    async def call_impersonation_ai(cls, session: Session):
         gid = session.scene.id
         try:
             if not (group_msg := GROUP_MSG_CACHE[gid]):
@@ -329,7 +326,7 @@ class ChatManager:
             return
 
         CHAT_RECORDS = "".join(
-            f"[{msg.time} USERNAME {msg.username} @UID {msg.uid}]:{msg.msg}\n\n"
+            f"<{msg.time}> [USERNAME {msg.username} @UID {msg.uid}]:{msg.msg}\n\n"
             for msg in group_msg
         )
         prompt = IMPERSONATION_PROMPT.format(
@@ -365,9 +362,8 @@ class ChatManager:
             logger.info("伪人不需要回复，已被跳过", "zhipu_toolkit", session=session)
             return
         logger.info(f"伪人回复: {answer}", "zhipu_toolkit", session=session)
-        answer =  extract_message_content(answer)
-        assert isinstance(answer, str)
-        return answer
+        answer = extract_message_content(answer)
+        await UniMessage(answer).send()
 
     @classmethod
     async def get_zhipu_result(
@@ -381,7 +377,7 @@ class ChatManager:
     ) -> ZhipuResult:
         loop = asyncio.get_event_loop()
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
-        request_id =  get_request_id()
+        request_id = get_request_id()
         tools = (await ToolsManager.get_tools()) if use_tool else None
         tool_map = ToolsManager.tools_registry.keys() if tools else None
         logger.info(
