@@ -235,7 +235,7 @@ async def _(bot: Bot, msg: UniMsg, session: Uninfo):
     if not match:
         return  # 无效命令，直接退出
 
-    action, group_id = match[1], (match[2]) or session.scene.id
+    action, group_id = match[1], str((match[2]) or session.scene.id)
 
     # 权限校验（仅当手动指定群号时）
     if group_id != session.scene.id and session.user.id not in bot.config.superusers:
