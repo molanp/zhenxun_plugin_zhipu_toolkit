@@ -253,6 +253,7 @@ async def _(bot: Bot, msg: UniMsg, session: Uninfo):
 @chat.handle()
 async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
     tome, use_reply = await is_to_me(event)
+    api_key = ChatConfig.get("API_KEY")  # 缓存 API_KEY 查找
 
     if tome:
         plain_text = msg.extract_plain_text().strip()
@@ -263,21 +264,26 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
             await UniMessage([Text(text), Image(path=image_path)]).finish(reply_to=True)
             return
 
-        if not ChatConfig.get("API_KEY"):
+        if not api_key:
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
             return
 
-        # 获取引用图片（如果有）
-        image = await extract_reply_image(event, bot)
+        # 内联引用图片提取逻辑
+        image = ""
+        reply = await reply_fetch(event, bot)
+        if isinstance(reply, Reply) and not isinstance(reply.msg, str):
+            generated = await UniMessage.generate(message=reply.msg, event=event, bot=bot)
+            for item in generated:
+                if isinstance(item, Image):
+                    image = item
+                    break
 
-        # 获取聊天结果
         result = await ChatManager.normal_chat_result(image + msg, session)
 
         if result.startswith("出错了"):
             await UniMessage(Text(result)).finish(reply_to=True)
             return
 
-        # 分段发送结果
         for r, delay in await split_text(result):
             await UniMessage(r).send(reply_to=use_reply)
             await asyncio.sleep(delay)
@@ -287,7 +293,7 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
     if ensure_group(session) and await ImpersonationStatus.check(session):
         await cache_group_message(msg, session)
 
-        if not ChatConfig.get("API_KEY"):
+        if not api_key:
             return
 
         if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
@@ -295,15 +301,6 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
 
     # 伪人模式未启用
     logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
-
-async def extract_reply_image(event: Event, bot: Bot) -> Image | str:
-    reply = await reply_fetch(event, bot)
-    if isinstance(reply, Reply) and not isinstance(reply.msg, str):
-        generated = await UniMessage.generate(message=reply.msg, event=event, bot=bot)
-        for item in generated:
-            if isinstance(item, Image):
-                return item
-    return ""
 
 
 @clear_my_chat.handle()
