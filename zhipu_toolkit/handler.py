@@ -32,7 +32,7 @@ from nonebot_plugin_alconna import (
     on_alconna,
 )
 from nonebot_plugin_alconna.uniseg.tools import reply_fetch
-from nonebot_plugin_uninfo import ADMIN, Session, UniSession
+from nonebot_plugin_uninfo import ADMIN, Uninfo
 
 from .config import ChatConfig, get_prompt
 from .data_source import (
@@ -83,7 +83,7 @@ async def delete_expired_chat_history():
 draw_pic = on_alconna(
     Alconna(
         "生成图片",
-        Args["size?", r"re:(\d+)x(\d+)", "1440x960"]["msg?", MultiVar(Text | int)],
+        Args["size?", r"re:(\d+)x(\d+)", "1440x960"]["msg?", MultiVar(str | int)],
         meta=CommandMeta(compact=True),
     ),
     rule=enable_qbot,
@@ -94,7 +94,7 @@ draw_pic = on_alconna(
 draw_video = on_alconna(
     Alconna(
         "生成视频",
-        Args["msg?", MultiVar(Text | int | Image)],
+        Args["msg?", MultiVar(str | int | Image)],
         meta=CommandMeta(compact=True),
     ),
     rule=enable_qbot,
@@ -103,7 +103,7 @@ draw_video = on_alconna(
 )
 
 byd_mode = on_alconna(
-    Alconna(r"re:(启用|禁用)伪人模式\s*(\d*)"),
+    Alconna(r"re:(?:启用|禁用)伪人模式(?:\s*(\S+))?"),
     rule=enable_qbot,
     priority=5,
     permission=ADMIN() | SUPERUSER,
@@ -135,7 +135,7 @@ clear_group_chat = on_alconna(
 clear_chat = on_alconna(
     Alconna(
         "清理会话",
-        Args["target", MultiVar(Text | int | At)],
+        Args["target", MultiVar(str | int | At)],
         meta=CommandMeta(compact=True),
     ),
     rule=enable_qbot,
@@ -147,7 +147,7 @@ clear_chat = on_alconna(
 show_chat = on_alconna(
     Alconna(
         "查看会话",
-        Args["target?", Text | int | At],
+        Args["target?", str | int | At],
         meta=CommandMeta(compact=True),
     ),
     rule=enable_qbot,
@@ -229,73 +229,86 @@ async def _(result: Arparma):
 
 
 @byd_mode.handle()
-async def _(bot: Bot, msg: UniMsg, session: Session = UniSession()):
+async def _(bot: Bot, msg: UniMsg, session: Uninfo):
     command = msg.extract_plain_text().strip()
-    if match := re.match(r"(启用|禁用)伪人模式(?:\s*(\d+))?", command):
-        action = match[1]
-        if group_id := match[2]:
-            if session.user.id not in bot.config.superusers:
-                return
+    match = re.match(r"(启用|禁用)伪人模式(?:\s*(\S+))?", command)
+    if not match:
+        return  # 无效命令，直接退出
 
-            if await ImpersonationStatus.action(action, int(group_id)):
-                await UniMessage(Text(f"群聊 {group_id} 已 {action} 伪人模式")).send(
-                    reply_to=True
-                )
-                logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
-            else:
-                await UniMessage(
-                    Text(f"群聊 {group_id} 伪人模式不可重复 {action}")
-                ).send(reply_to=True)
-        elif ensure_group(session):
-            if await ImpersonationStatus.action(action, session.scene.id):
-                await UniMessage(Text(f"当前群聊已 {action} 伪人模式")).send(
-                    reply_to=True
-                )
-                logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
-            else:
-                await UniMessage(Text(f"当前群聊伪人模式不可重复 {action}")).send(
-                    reply_to=True
-                )
+    action, group_id = match[1], (match[2]) or session.scene.id
 
+    # 权限校验（仅当手动指定群号时）
+    if group_id != session.scene.id and session.user.id not in bot.config.superusers:
+        return
+
+    # 执行伪人模式操作
+    success = await ImpersonationStatus.action(action, group_id)
+    if success:
+        target = "当前群聊" if group_id == session.scene.id else f"群聊 {group_id}"
+        await UniMessage(Text(f"{target} 已 {action} 伪人模式")).send(reply_to=True)
+        logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
+    else:
+        target = "当前群聊" if group_id == session.scene.id else f"群聊 {group_id}"
+        await UniMessage(Text(f"{target} 伪人模式不可重复 {action}")).send(reply_to=True)
 
 @chat.handle()
-async def zhipu_chat(bot, event: Event, msg: UniMsg, session: Session = UniSession()):
-    tome, reply = await is_to_me(event)
+async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
+    tome, use_reply = await is_to_me(event)
+
     if tome:
-        if msg.only(Text) and msg.extract_plain_text().strip() == "":
-            result = hello()
-            await UniMessage([Text(result[0]), Image(path=result[1])]).finish(
-                reply_to=True
-            )
-        if ChatConfig.get("API_KEY") == "":
+        plain_text = msg.extract_plain_text().strip()
+
+        # 空消息触发 hello()
+        if not plain_text:
+            text, image_path = hello()
+            await UniMessage([Text(text), Image(path=image_path)]).finish(reply_to=True)
+            return
+
+        if not ChatConfig.get("API_KEY"):
             await UniMessage(Text("请先设置智谱AI的APIKEY!")).send(reply_to=True)
             return
-        image = ""
-        image_ = await reply_fetch(event, bot)
-        if isinstance(image_, Reply) and not isinstance(image_.msg, str):
-            image_ = await UniMessage.generate(message=image_.msg, event=event, bot=bot)
-            for i in image_:
-                if isinstance(i, Image):
-                    image = i
-                    break
+
+        # 获取引用图片（如果有）
+        image = await extract_reply_image(event, bot)
+
+        # 获取聊天结果
         result = await ChatManager.normal_chat_result(image + msg, session)
-        if result[:3] == "出错了":
+
+        if result.startswith("出错了"):
             await UniMessage(Text(result)).finish(reply_to=True)
-        for r, delay in await split_text(result):
-            await UniMessage(r).send(reply_to=reply)
-            await asyncio.sleep(delay)
-    elif ensure_group(session) and await ImpersonationStatus.check(session):
-        if ChatConfig.get("API_KEY") == "":
             return
+
+        # 分段发送结果
+        for r, delay in await split_text(result):
+            await UniMessage(r).send(reply_to=use_reply)
+            await asyncio.sleep(delay)
+        return
+
+    # 群聊伪人模式触发
+    if ensure_group(session) and await ImpersonationStatus.check(session):
         await cache_group_message(msg, session)
+
+        if not ChatConfig.get("API_KEY"):
+            return
+
         if random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY"):
             return asyncio.create_task(ChatManager.call_impersonation_ai(session))
-    else:
-        logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
+
+    # 伪人模式未启用
+    logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
+
+async def extract_reply_image(event: Event, bot: Bot) -> Image | str:
+    reply = await reply_fetch(event, bot)
+    if isinstance(reply, Reply) and not isinstance(reply.msg, str):
+        generated = await UniMessage.generate(message=reply.msg, event=event, bot=bot)
+        for item in generated:
+            if isinstance(item, Image):
+                return item
+    return ""
 
 
 @clear_my_chat.handle()
-async def _(session: Session = UniSession()):
+async def _(session: Uninfo):
     uid = session.user.id
     await clear_my_chat.send(
         Text(f"已清理 {uid} 的 {await ChatManager.clear_history(uid)} 条数据"),
@@ -312,7 +325,7 @@ async def _():
 
 
 @clear_group_chat.handle()
-async def _(session: Session = UniSession()):
+async def _(session: Uninfo):
     count = await ChatManager.clear_history(f"g-{session.scene.id}")
     await clear_group_chat.send(
         Text(f"已清理 {count} 条用户数据"),

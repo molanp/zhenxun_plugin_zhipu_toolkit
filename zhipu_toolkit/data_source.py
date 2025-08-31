@@ -476,11 +476,11 @@ class ImpersonationStatus:
         ) is True and session.scene.id not in ChatConfig.get("IMPERSONATION_BAN_GROUP")
 
     @classmethod
-    async def get(cls) -> list[int | str]:
+    async def get(cls) -> list[str]:
         return ChatConfig.get("IMPERSONATION_BAN_GROUP")
 
     @classmethod
-    async def ban(cls, group_id: int | str) -> bool:
+    async def ban(cls, group_id: str) -> bool:
         origin = await cls.get()
         if group_id in origin:
             return False
@@ -489,7 +489,7 @@ class ImpersonationStatus:
         return True
 
     @classmethod
-    async def unban(cls, group_id: int | str) -> bool:
+    async def unban(cls, group_id: str) -> bool:
         origin = await cls.get()
         if group_id not in origin:
             return False
@@ -498,7 +498,7 @@ class ImpersonationStatus:
         return True
 
     @classmethod
-    async def action(cls, action: str, group_id: int | str) -> bool:
+    async def action(cls, action: str, group_id: str) -> bool:
         if action == "禁用":
             return await cls.ban(group_id)
         elif action == "启用":
