@@ -235,20 +235,19 @@ async def _(bot: Bot, msg: UniMsg, session: Uninfo):
     if not match:
         return  # 无效命令，直接退出
 
-    action, group_id = match[1], str((match[2]) or session.scene.id)
+    action, group_id = match[1], str(match[2] or session.scene.id)
 
     # 权限校验（仅当手动指定群号时）
     if group_id != session.scene.id and session.user.id not in bot.config.superusers:
         return
 
+    target = "当前群聊" if group_id == session.scene.id else f"群聊 {group_id}"
     # 执行伪人模式操作
     success = await ImpersonationStatus.action(action, group_id)
     if success:
-        target = "当前群聊" if group_id == session.scene.id else f"群聊 {group_id}"
         await UniMessage(Text(f"{target} 已 {action} 伪人模式")).send(reply_to=True)
         logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
     else:
-        target = "当前群聊" if group_id == session.scene.id else f"群聊 {group_id}"
         await UniMessage(Text(f"{target} 伪人模式不可重复 {action}")).send(reply_to=True)
 
 @chat.handle()
