@@ -23,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="2.4",
+        version="2.5",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -36,7 +36,7 @@ __plugin_meta__ = PluginMetadata(
         configs=[
             RegisterConfig(
                 key="API_KEY",
-                value="",
+                value=None,
                 type=str,
                 help="智谱AI平台的APIKEY",
                 default_value="",
