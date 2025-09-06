@@ -103,7 +103,7 @@ draw_video = on_alconna(
 )
 
 byd_mode = on_alconna(
-    Alconna(r"re:(?:启用|禁用)伪人模式(?:\s*(\S+))?"),
+    Alconna(r"re:(?:启用|禁用)伪人模式", Args["target?", str | int]),
     rule=enable_qbot,
     priority=5,
     permission=ADMIN() | SUPERUSER,
@@ -229,14 +229,14 @@ async def _(result: Arparma):
 
 
 @byd_mode.handle()
-async def _(bot: Bot, msg: UniMsg, session: Uninfo):
+async def _(bot: Bot, msg: UniMsg, session: Uninfo, result: Arparma):
     command = msg.extract_plain_text().strip()
-    match = re.match(r"(启用|禁用)伪人模式(?:\s*(\S+))?", command)
+    match = re.match(r"(启用|禁用)伪人模式", command)
     if not match:
         return  # 无效命令，直接退出
 
-    action, group_id = match[1], str(match[2] or session.scene.id)
-
+    action = match[1]
+    group_id = str(result.query("target")) if result.find("target") else session.scene.id
     # 权限校验（仅当手动指定群号时）
     if group_id != session.scene.id and session.user.id not in bot.config.superusers:
         return
@@ -248,7 +248,10 @@ async def _(bot: Bot, msg: UniMsg, session: Uninfo):
         await UniMessage(Text(f"{target} 已 {action} 伪人模式")).send(reply_to=True)
         logger.info(f"{action} 伪人模式", "zhipu_toolkit", session=session)
     else:
-        await UniMessage(Text(f"{target} 伪人模式不可重复 {action}")).send(reply_to=True)
+        await UniMessage(Text(f"{target} 伪人模式不可重复 {action}")).send(
+            reply_to=True
+        )
+
 
 @chat.handle()
 async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
@@ -272,7 +275,9 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
         image = ""
         reply = await reply_fetch(event, bot)
         if isinstance(reply, Reply) and not isinstance(reply.msg, str):
-            generated = await UniMessage.generate(message=reply.msg, event=event, bot=bot)
+            generated = await UniMessage.generate(
+                message=reply.msg, event=event, bot=bot
+            )
             for item in generated:
                 if isinstance(item, Image):
                     image = item
