@@ -226,6 +226,7 @@ def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list
     )
     match = pattern.match(msg.strip())
     message = match["message"].strip() if match else msg.strip()
+    message = message.rstrip("。")
     return str2msg(message) if to_msg else message
 
 
