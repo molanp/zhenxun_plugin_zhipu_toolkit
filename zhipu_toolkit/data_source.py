@@ -24,7 +24,6 @@ from zhenxun.utils.rules import ensure_group
 from .config import (
     DEFAULT_PROMPT,
     IMPERSONATION_PROMPT,
-    META_DATA,
     PROMPT_FILE,
     ChatConfig,
     get_prompt,
@@ -202,10 +201,7 @@ class ChatManager:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
         username = get_username_by_session(session)
         prompt = await get_prompt()
-        await cls.add_system_message(
-            META_DATA.format(prompt=prompt),
-            uid,
-        )
+        await cls.add_system_message(prompt, uid)
         message, img_url = await msg2str(msg, bool(ChatConfig.get("IS_MULTIMODAL")))
         word_limit = ChatConfig.get("WORD_LIMIT")
         if len(message) > word_limit:
