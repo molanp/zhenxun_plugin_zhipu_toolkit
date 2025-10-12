@@ -93,9 +93,10 @@ def get_username_by_session(session: Session) -> str:
         and session.member.nick != ""
         and session.member.nick is not None
     ):
-        return session.member.nick
-    name = session.user.name
-    return name.strip() if name != "" and name is not None else "未知用户"
+        name = session.member.nick
+    else:
+        name = session.user.name
+    return re.sub(r"[\x00-\x09\x0b-\x1f\x7f-\x9f]", "", name) or "未知用户"
 
 
 async def generate_image_description(url: str):
@@ -236,6 +237,7 @@ async def get_username(uid: str, session: Uninfo) -> str:
         bot, uid, session.scene.id if ensure_group(session) else None
     )
     if info is not None:
-        return info.card if info.card is not None and info.card != "" else info.name
+        name = info.card or info.name
+        return re.sub(r"[\x00-\x09\x0b-\x1f\x7f-\x9f]", "", name)
     else:
-        return "未知"
+        return "未知用户"
