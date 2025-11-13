@@ -75,7 +75,7 @@ poetry add zai-sdk
 |:-----:|:----:|:----:|:----:|
 | `API_KEY` | **是** | `None` | 智谱ai的API KEY |
 | `CHAT_MODEL` | **否** | `glm-4-flash`| 所使用的对话模型代码 |
-| `IS_MULTIMODAL` | **否** | `False` | 对话模型是否为多模态模型，启用后忽略图像理解模型配置项 |
+| `IS_MULTIMODAL` | **否** | `False` | 对话模型是否为多模态模型(指GLM-4.1V-Thinking-Flash, GLM-4V-Plus-0111, GLM-4.1V-Thinking-Flash, GLM-4.5V模型)，启用后忽略图像理解模型配置项 |
 | `PIC_MODEL` | **否** | `cogview-3-flash` | 所使用的图片生成模型代码 |
 | `VIDEO_MODEL` | **否** | `cogvideox-flash` | 所使用的视频生成模型代码|
 | `IMAGE_UNDERSTANDING_MODEL` | **否** | `glm-4v-flash` | 所使用的图片理解模型代码 |
