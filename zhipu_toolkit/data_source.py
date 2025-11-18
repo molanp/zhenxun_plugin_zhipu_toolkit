@@ -243,8 +243,8 @@ class ChatManager:
         parts = []
         for r in rows:
             uname = unique_keys[_key_from_row(r)]
-            parts.append(f"{r['create_time']} [{uname}]: {r['text']}\n\n")
-        CHAT_RECORDS = "".join(parts)
+            parts.append(f"{r['create_time']} [{uname}]: {r['text']}")
+        CHAT_RECORDS = "\n\n".join(parts)
 
         prompt = IMPERSONATION_PROMPT.format(
             date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
