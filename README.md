@@ -7,8 +7,6 @@
 > 插件需要智谱AI的API KEY，请安装插件后在`data/config.yaml`中配置，保存文件后插件会自动重载
 >
 > 插件默认使用平台的免费模型，只需注册即可，无任何花费(建议使用默认的`glm-4-flash`而不是`glm-4.5-flash`，后者的效果并不好)
->
-> **如使用QBot，请参考常见问题禁用此插件**
 
 > [!NOTE]
 > **关于模型选择**
@@ -82,9 +80,8 @@ poetry add zai-sdk
 | `CHAT_MODE` | **否** | `user` | 对话分组模式，支持'user','group','all' |
 | `IMPERSONATION_MODE` | **否** | `False` | 是否启用伪人模式 |
 | `IMPERSONATION_TRIGGER_FREQUENCY` | **否** | `20` | 伪人模式触发频率[0-100] |
-| `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型,由于对话量大，建议使用免费模型 |
+| `IMPERSONATION_MODEL` | **否** | `glm-4-flash` | 伪人模式对话模型 |
 | `IMPERSONATION_BAN_GROUP` | **否** | `[]` | 禁用伪人模式的群组列表 |
-| `ENBALE_QBOT` | **否** | `False` | 允许QQBot使用本插件 |
 | `EXPIRE_DAY` | **否** | `3` | 用户对话记录保存时间(天), -1表示永久保存 |
 | `WORD_LIMIT` | **否** | `1000` | 单次对话消息字数限制(最大值一般为4095) |
 | `TEXT_MAX_SPLIT` | **否** | `3` | 单次对话消息最大分割段数, 0表示无限分割, -1表示不分割 |
@@ -92,11 +89,3 @@ poetry add zai-sdk
 ## ⁉️ Q&A
 - **Q:** 什么是伪人模式
 - 开启此模式后，bot会如同真人一般，读取最近20条群友的聊天记录，然后根据这些内容进行发言。此模式默认触发概率为20%，可以通过配置`IMPERSONATION_TRIGGER_FREQUENCY`进行修改.
-- **Q:** 为什么默认对QBot禁用AI功能？
-- 因为非腾讯元宝的AI服务大概率不会过审，所以默认禁用。
-
-## 📝 测试报告
-以下为官方测试人员对本插件的测试，可以看到AI对话没有通过审核
-
-![b93c564b550c99f874584b123aec8e59_720](https://github.com/user-attachments/assets/bf0230bd-5a3f-485c-8de8-9368e07f10d9)
-![d3109ebba637ab6721e3e898977335a8](https://github.com/user-attachments/assets/7281077e-b195-4b72-bfac-d6ed93d32a18)
