@@ -4,105 +4,39 @@ import os
 import random
 from typing import Any
 
-import aiofiles
 from nonebot import require
+
+from zhenxun.models.chat_history import ChatHistory
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
-from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, UniMsg, Video
+from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, Video
 from nonebot_plugin_uninfo import Session
 import ujson
 from zai import ZhipuAiClient as ZhipuAI
 from zai.types.chat.chat_completion import CompletionMessage, CompletionMessageToolCall
 
 from zhenxun.configs.config import BotConfig, Config
-from zhenxun.configs.path_config import DATA_PATH, IMAGE_PATH
+from zhenxun.configs.path_config import IMAGE_PATH
 from zhenxun.models.ban_console import BanConsole
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
 from .config import (
-    DEFAULT_PROMPT,
     IMPERSONATION_PROMPT,
-    PROMPT_FILE,
     ChatConfig,
     get_prompt,
 )
-from .model import GroupMessageModel, ZhipuChatHistory, ZhipuResult
+from .model import ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
     extract_message_content,
     format_usr_msg,
     get_request_id,
+    get_username,
     get_username_by_session,
-    migrate_user_data,
     msg2str,
-    remove_directory_with_retry,
 )
-
-GROUP_MSG_CACHE: dict[str, list[GroupMessageModel]] = {}
-_group_cache_lock = asyncio.Lock()
-
-
-async def cache_group_message(
-    message_: UniMsg, session: Session, self_name=None
-) -> None:
-    """
-    异步缓存群组消息函数。
-
-    该函数用于将接收到的群组消息缓存到内存中，以便后续处理。
-    如果self参数不为空，则表示消息来自机器人自身，否则消息来自其他用户。
-    使用GroupMessageModel模型来封装消息信息。
-
-    参数:
-    - message: UniMsg类型，表示接收到的消息。
-    - session: Session类型，表示当前会话，包含消息上下文信息。
-    - self_name: 可选参数，表示如果消息来自机器人自身，该参数不为空。
-
-    返回值:
-    无返回值。
-    """
-    async with _group_cache_lock:
-        message, _ = await msg2str(message_)
-        count = len(message)
-        if count > 500:
-            logger.warning(
-                f"拒绝缓存此消息: 字数超限({count} > 500)",
-                "zhipu_toolkit",
-                session=session,
-            )
-            return
-        if self_name is not None:
-            msg = GroupMessageModel(
-                uid=session.self_id,
-                username=self_name,
-                msg=message,
-                time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            )
-        else:
-            msg = GroupMessageModel(
-                uid=session.user.id,
-                username=get_username_by_session(session),
-                msg=message,
-                time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            )
-
-        gid = session.scene.id
-        logger.debug(
-            f"GROUP {gid} 成功缓存聊天记录: {message}", "zhipu_toolkit", session=session
-        )
-        if gid in GROUP_MSG_CACHE:
-            if len(GROUP_MSG_CACHE[gid]) >= 20:
-                GROUP_MSG_CACHE[gid].pop(0)
-                logger.debug(
-                    f"GROUP {gid} 缓存已满，自动清理最早的记录",
-                    "zhipu_toolkit",
-                    session=session,
-                )
-
-            GROUP_MSG_CACHE[gid].append(msg)
-        else:
-            GROUP_MSG_CACHE[gid] = [msg]
 
 
 def hello() -> list:
@@ -145,45 +79,6 @@ async def check_video_task_status(task_id: str, action: type[AlconnaMatcher]):
 
 class ChatManager:
     @classmethod
-    async def initialize(cls) -> None:
-        # 迁移prompt
-        if not PROMPT_FILE.exists() or PROMPT_FILE.stat().st_size == 0:
-            p = ChatConfig.get("SOUL")
-            if p is not None:
-                new_prompt = p.strip()
-                Config.set_config("zhipu_toolkit", "SOUL", None, True)
-                logger.info("PROMPT数据迁移成功", "zhipu_toolkit")
-            else:
-                new_prompt = DEFAULT_PROMPT
-            PROMPT_FILE.write_text(new_prompt, encoding="utf-8")
-        # 迁移对话数据
-        json_path = DATA_PATH / "zhipu_toolkit" / "chat_history.json"
-        if not json_path.exists():
-            return
-
-        success = 0
-        failed = 0
-        try:
-            async with aiofiles.open(json_path, encoding="utf-8") as f:
-                old_data: dict[str, list[dict]] = ujson.loads(await f.read())
-
-            for uid, messages in old_data.items():
-                if await migrate_user_data(uid, messages):
-                    success += 1
-                else:
-                    failed += 1
-
-            await remove_directory_with_retry(DATA_PATH / "zhipu_toolkit")
-        except Exception as e:
-            logger.error("对话数据迁移初始化失败", "zhipu_toolkit", e=e)
-        finally:
-            if success + failed > 0:
-                logger.info(
-                    f"对话数据迁移完成: {success} 个成功, {failed} 个失败",
-                    "zhipu_toolkit",
-                )
-
-    @classmethod
     async def normal_chat_result(cls, msg: UniMessage, session: Session) -> str:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
@@ -200,8 +95,7 @@ class ChatManager:
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
         username = get_username_by_session(session)
-        prompt = await get_prompt()
-        await cls.add_system_message(prompt, uid)
+        await cls.add_system_message(uid)
         message, img_url = await msg2str(msg, bool(ChatConfig.get("IS_MULTIMODAL")))
         word_limit = ChatConfig.get("WORD_LIMIT")
         if len(message) > word_limit:
@@ -297,8 +191,9 @@ class ChatManager:
         )
 
     @classmethod
-    async def add_system_message(cls, soul: str, uid: str) -> None:
+    async def add_system_message(cls, uid: str) -> None:
         if not await ZhipuChatHistory.filter(uid=uid, role="system").exists():
+            soul = await get_prompt()
             await ZhipuChatHistory.create(
                 uid=uid, role="system", content=soul, platform="system"
             )
@@ -315,31 +210,40 @@ class ChatManager:
     @classmethod
     async def call_impersonation_ai(cls, session: Session):
         gid = session.scene.id
-        try:
-            if not (group_msg := GROUP_MSG_CACHE[gid]):
-                return
-        except KeyError:
-            return
 
-        CHAT_RECORDS = "".join(
-            f"<{msg.time}> [USERNAME {msg.username} @UID {msg.uid}]:{msg.msg}\n\n"
-            for msg in group_msg
+        messages = (
+            await ChatHistory.filter(group_id=gid)
+            .order_by("-create_time")
+            .limit(20)
+            .all()
         )
+        if not messages:
+            logger.warning(
+                f"数据库中未找到群 {gid} 的聊天记录",
+                command="zhipu_toolkit",
+                session=session,
+            )
+            return
+        CHAT_RECORDS = ""
+        for msg in messages:
+            username = await get_username(msg.bot_id, msg.user_id, msg.group_id)
+            CHAT_RECORDS += f"{msg.create_time} [{username}]: {msg.text}\n\n"
+
         prompt = IMPERSONATION_PROMPT.format(
             date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             name=BotConfig.self_nickname,
             uid=session.self_id,
             soul=await get_prompt(),
-            CHAT_RECORDS=CHAT_RECORDS,
         )
         result = await cls.get_zhipu_result(
             get_request_id(),
             ChatConfig.get("IMPERSONATION_MODEL"),
             [
                 {
-                    "role": "user",
+                    "role": "system",
                     "content": prompt,
                 },
+                {"role": "user", "content": CHAT_RECORDS},
             ],
             session,
             True,
@@ -366,7 +270,7 @@ class ChatManager:
         cls,
         uid: str,
         model: str,
-        messages: list,
+        messages: list[dict[str, str]],
         session: Session,
         impersonation: bool = False,
         use_tool: bool = True,

@@ -23,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="2.6",
+        version="3.0",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -101,7 +101,7 @@ __plugin_meta__ = PluginMetadata(
                 key="IMPERSONATION_MODEL",
                 value="glm-4-flash",
                 type=str,
-                help="伪人模式对话模型,由于对话量大，建议使用免费模型",
+                help="伪人模式对话模型，建议使用免费模型",
                 default_value="glm-4-flash",
             ),
             RegisterConfig(
@@ -110,13 +110,6 @@ __plugin_meta__ = PluginMetadata(
                 type=list[str],
                 help="禁用伪人模式的群组列表",
                 default_value=[],
-            ),
-            RegisterConfig(
-                key="ENBALE_QBOT",
-                value=False,
-                type=bool,
-                help="允许QQ官方Bot调用本插件",
-                default_value=False,
             ),
             RegisterConfig(
                 key="EXPIRE_DAY",
@@ -139,7 +132,6 @@ __plugin_meta__ = PluginMetadata(
                 help="单次对话消息最大分割段数, 0表示无限分割, -1表示不分割",
                 default_value=3,
             ),
-            RegisterConfig(key="SOUL", value=None, type=None, help="已弃用"),
         ],
     ).dict(),
 )

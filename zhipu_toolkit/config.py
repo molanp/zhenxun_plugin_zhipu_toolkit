@@ -60,11 +60,6 @@ IMPERSONATION_PROMPT = """
 <soul>
 {soul}
 </soul>
-
-【当前聊天记录】
-<chat_records>
-{CHAT_RECORDS}
-</chat_records>
 """
 
 

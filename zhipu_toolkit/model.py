@@ -11,17 +11,6 @@ from zai.types.chat.chat_completion import CompletionMessage
 from zhenxun.services.db_context import Model
 
 
-class GroupMessageModel(BaseModel):
-    uid: str
-    """用户ID"""
-    username: str
-    """用户昵称"""
-    msg: str
-    """消息内容"""
-    time: str
-    """消息时间"""
-
-
 class ZhipuResult(BaseModel):
     content: str | None = None
     error_code: int

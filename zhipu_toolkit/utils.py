@@ -1,9 +1,7 @@
 import asyncio
 import base64
 import datetime
-from pathlib import Path
 import re
-import shutil
 import uuid
 
 from nonebot import get_bot, require
@@ -17,12 +15,9 @@ from nonebot_plugin_uninfo import Session, Uninfo
 from zai import ZhipuAiClient as ZhipuAI
 
 from zhenxun.configs.config import BotConfig
-from zhenxun.services.log import logger
 from zhenxun.utils.platform import PlatformUtils
-from zhenxun.utils.rules import ensure_group
 
 from .config import ChatConfig
-from .model import ZhipuChatHistory
 
 
 def get_request_id() -> str:
@@ -96,6 +91,8 @@ def get_username_by_session(session: Session) -> str:
         name = session.member.nick
     else:
         name = session.user.name
+    if name is None:
+        return "未知用户"
     return re.sub(r"[\x00-\x09\x0b-\x1f\x7f-\x9f]", "", name) or "未知用户"
 
 
@@ -157,38 +154,6 @@ async def split_text(text: str) -> list[tuple[list[Text], float]]:
     return results
 
 
-async def remove_directory_with_retry(
-    path: Path, retries: int = 3, delay: float = 0.5
-) -> None:
-    for attempt in range(retries):
-        try:
-            shutil.rmtree(path)
-            return
-        except Exception as e:
-            if attempt == retries - 1:
-                logger.error(
-                    "Failed to remove directory after multiple attempts",
-                    "zhipu_toolkit",
-                    e=e,
-                )
-            else:
-                await asyncio.sleep(delay)
-
-
-async def migrate_user_data(uid: str, messages: list[dict]) -> bool:
-    try:
-        valid_messages = [
-            msg for msg in messages if isinstance(msg, dict) and "role" in msg
-        ]
-        await ZhipuChatHistory.bulk_create(
-            [ZhipuChatHistory(uid=uid, **msg) for msg in valid_messages]
-        )
-        return True
-    except Exception as e:
-        logger.error(f"UID {uid} 迁移对话数据失败", "zhipu_toolkit", e=e)
-        return False
-
-
 def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     """\n"""
     return (
@@ -231,13 +196,10 @@ def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list
     return str2msg(message) if to_msg else message
 
 
-async def get_username(uid: str, session: Uninfo) -> str:
-    bot = get_bot(session.self_id)
-    info = await PlatformUtils.get_user(
-        bot, uid, session.scene.id if ensure_group(session) else None
-    )
-    if info is not None:
-        name = info.card or info.name
-        return re.sub(r"[\x00-\x09\x0b-\x1f\x7f-\x9f]", "", name)
-    else:
+async def get_username(bot_id: str, uid: str, group_id: str | None = None) -> str:
+    bot = get_bot(bot_id)
+    info = await PlatformUtils.get_user(bot, uid, group_id)
+    if info is None:
         return "未知用户"
+    name = info.card or info.name
+    return re.sub(r"[\x00-\x09\x0b-\x1f\x7f-\x9f]", "", name)
