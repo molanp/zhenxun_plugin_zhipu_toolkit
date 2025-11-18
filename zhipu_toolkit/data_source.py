@@ -5,6 +5,7 @@ import random
 from typing import Any
 
 from nonebot import require
+import ujson
 
 from zhenxun.models.chat_history import ChatHistory
 
@@ -12,7 +13,6 @@ require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, Video
 from nonebot_plugin_uninfo import Session
-import ujson
 from zai import ZhipuAiClient as ZhipuAI
 from zai.types.chat.chat_completion import CompletionMessage, CompletionMessageToolCall
 
@@ -22,11 +22,7 @@ from zhenxun.models.ban_console import BanConsole
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
-from .config import (
-    IMPERSONATION_PROMPT,
-    ChatConfig,
-    get_prompt,
-)
+from .config import IMPERSONATION_PROMPT, ChatConfig, get_prompt
 from .model import ZhipuChatHistory, ZhipuResult
 from .tools import ToolsManager
 from .utils import (
@@ -211,23 +207,44 @@ class ChatManager:
     async def call_impersonation_ai(cls, session: Session):
         gid = session.scene.id
 
-        messages = (
+        rows = (
             await ChatHistory.filter(group_id=gid)
             .order_by("-create_time")
             .limit(20)
-            .all()
+            .values("bot_id", "user_id", "group_id", "create_time", "text")
         )
-        if not messages:
+        if not rows:
             logger.warning(
                 f"数据库中未找到群 {gid} 的聊天记录",
                 command="zhipu_toolkit",
                 session=session,
             )
             return
-        CHAT_RECORDS = ""
-        for msg in messages:
-            username = await get_username(msg.bot_id, msg.user_id, msg.group_id)
-            CHAT_RECORDS += f"{msg.create_time} [{username}]: {msg.text}\n\n"
+
+        # 本地缓存相同 (bot_id,user_id,group_id) 的用户名，避免重复查询
+        def _key_from_row(r):
+            return (r["bot_id"], r["user_id"], r["group_id"])
+        unique_keys = {}
+        tasks = []
+        for r in rows:
+            key = _key_from_row(r)
+            if key not in unique_keys:
+                unique_keys[key] = None
+                tasks.append(get_username(*key))
+
+        # 并发获取所有不同用户的用户名
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            # 填回缓存（注意 tasks 与 unique_keys 顺序一致）
+            for key, name in zip(list(unique_keys.keys()), results):
+                unique_keys[key] = name
+
+        # 构建聊天记录字符串（列表收集，最后 join）
+        parts = []
+        for r in rows:
+            uname = unique_keys[_key_from_row(r)]
+            parts.append(f"{r['create_time']} [{uname}]: {r['text']}\n\n")
+        CHAT_RECORDS = "".join(parts)
 
         prompt = IMPERSONATION_PROMPT.format(
             date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
