@@ -75,6 +75,11 @@ async def get_prompt() -> str:
     try:
         async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
             return await f.read()
+    except FileNotFoundError:
+        logger.warning("PROMPT文件不存在，正在初始化...", "zhipu_toolkit")
+        async with aiofiles.open(PROMPT_FILE, "w", encoding="utf-8") as f:
+            await f.write(DEFAULT_PROMPT)
+        return DEFAULT_PROMPT
     except Exception as e:
         logger.error("PROMPT读取失败，使用 DEFAULT_PROMPT", "zhipu_toolkit", e=e)
         return DEFAULT_PROMPT
