@@ -65,7 +65,6 @@ def str2msg(message: str) -> list[Text]:
     :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
     """
     segments = []
-    message = message.removesuffix("。")
     at_pattern = r"@UID ([^ ]+)|@\[uid=([^>]+)\]"
     last_pos = 0
 
