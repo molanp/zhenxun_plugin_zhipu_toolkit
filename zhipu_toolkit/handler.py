@@ -2,7 +2,6 @@ import asyncio
 import re
 
 from nonebot import on_message, require
-from nonebot.rule import to_me
 from nonebot_plugin_apscheduler import scheduler
 from zai import ZhipuAiClient as ZhipuAI
 
@@ -99,7 +98,7 @@ byd_mode = on_alconna(
     block=True,
 )
 
-chat = on_message(priority=999, block=True, rule=to_me())
+chat = on_message(priority=999, block=True, rule=need_reply)
 
 byd_chat = on_message(priority=1000, block=True, rule=need_byd)
 
