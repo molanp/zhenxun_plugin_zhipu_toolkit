@@ -15,7 +15,7 @@ async def need_reply(event: Event) -> bool:
     if event.is_tome():
         return True
     msg = event.get_message().extract_plain_text()
-    return all(nickname not in msg for nickname in nicknames)
+    return all(nickname in msg for nickname in nicknames)
 
 
 async def need_byd(session: Uninfo) -> bool:
