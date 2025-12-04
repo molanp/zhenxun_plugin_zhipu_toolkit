@@ -14,7 +14,6 @@ from nonebot_plugin_alconna import At, Image, Text, UniMessage
 from nonebot_plugin_uninfo import Session, Uninfo
 from zai import ZhipuAiClient as ZhipuAI
 
-from zhenxun.configs.config import BotConfig
 from zhenxun.utils.platform import PlatformUtils
 
 from .config import ChatConfig
@@ -183,7 +182,7 @@ def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list
     # 去除开头的空白字符，包括换行符
     msg = msg.lstrip()
     pattern = re.compile(
-        rf"^{re.escape(BotConfig.self_nickname)}"  # 匹配昵称开头
+        rf"^.*?"  # 匹配昵称开头
         rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
         rf"[:：]\s*"  # 匹配冒号及空格
         rf"(?P<message>.*)$",  # 捕获消息内容
