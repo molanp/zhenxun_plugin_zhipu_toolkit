@@ -43,7 +43,7 @@ __plugin_meta__ = PluginMetadata(
             ),
             RegisterConfig(
                 key="CHAT_MODEL",
-                value="glm-4.5-flash",
+                value="glm-4-flash",
                 type=str,
                 help="所使用的对话模型",
                 default_value="glm-4-flash",
