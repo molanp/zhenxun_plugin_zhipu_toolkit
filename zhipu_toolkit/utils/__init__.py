@@ -16,7 +16,7 @@ from zai import ZhipuAiClient as ZhipuAI
 
 from zhenxun.utils.platform import PlatformUtils
 
-from .config import ChatConfig
+from ..config import ChatConfig
 
 
 def get_request_id() -> str:
@@ -36,7 +36,7 @@ async def msg2str(
     res = None
     for segment in msg:
         if isinstance(segment, At):
-            message += f"@[uid={segment.target}] "
+            message += f"@[qq={segment.target}] "
         elif isinstance(segment, Image):
             assert segment.url is not None
             img_url = segment.url.replace("https://", "http://")
@@ -182,10 +182,10 @@ def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list
     # 去除开头的空白字符，包括换行符
     msg = msg.lstrip()
     pattern = re.compile(
-        rf"^.*?"  # 匹配昵称开头
-        rf"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
-        rf"[:：]\s*"  # 匹配冒号及空格
-        rf"(?P<message>.*)$",  # 捕获消息内容
+        r"^.*?"  # 匹配昵称开头
+        r"(?:\([^)]+\))?"  # 匹配括号内的任意内容（直到右括号）
+        r"[:：]\s*"  # 匹配冒号及空格
+        r"(?P<message>.*)$",  # 捕获消息内容
         re.DOTALL,
     )
     match = pattern.match(msg.strip())

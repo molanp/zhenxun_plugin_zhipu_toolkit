@@ -4,10 +4,10 @@ from nonebot import get_bot
 
 from zhenxun.utils.platform import PlatformUtils
 
-from ._model import Tool
+from .AbstractTool import AbstractTool
 
 
-class MuteTool(Tool):
+class MuteTool(AbstractTool):
     """禁言用户的工具（支持随机时长）"""
 
     def __init__(self):
@@ -20,21 +20,20 @@ class MuteTool(Tool):
             parameters={
                 "type": "object",
                 "properties": {
-                    "uid": {
+                    "qq": {
                         "type": "string",
-                        "description": "目标用户UID，留空则禁言对话者",
+                        "description": "目标用户qq，留空则禁言当前用户",
                     },
                     "minute": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "禁言时长（分钟），不填则随机1-100分钟",
                     },
                 },
                 "required": [],
             },
-            func=self.Mute,
         )
 
-    async def Mute(
+    async def func(
         self, session, uid: str | None = None, minute: int | None = None
     ) -> str:
         bot = get_bot(self_id=session.self_id)
@@ -49,7 +48,7 @@ class MuteTool(Tool):
             return f"禁言用户失败, 原因: {e!s}"
 
 
-class UnMuteTool(Tool):
+class UnMuteTool(AbstractTool):
     """取消用户禁言的工具"""
 
     def __init__(self):
@@ -59,17 +58,16 @@ class UnMuteTool(Tool):
             parameters={
                 "type": "object",
                 "properties": {
-                    "uid": {
+                    "qq": {
                         "type": "string",
-                        "description": "目标用户UID，留空则取消对话者的禁言",
+                        "description": "目标用户qq，留空则取消当前用户的禁言",
                     },
                 },
                 "required": [],
             },
-            func=self.UnMute,
         )
 
-    async def UnMute(self, session, uid: str | None = None) -> str:
+    async def func(self, session, uid: str | None = None) -> str:
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
         uid = str(uid or session.user.id)

@@ -2,10 +2,10 @@ import random
 
 from zhenxun.models.ban_console import BanConsole
 
-from ._model import Tool
+from .AbstractTool import AbstractTool
 
 
-class BanTool(Tool):
+class BanTool(AbstractTool):
     """拉黑用户的工具（支持随机时长）"""
 
     def __init__(self):
@@ -18,22 +18,21 @@ class BanTool(Tool):
             parameters={
                 "type": "object",
                 "properties": {
-                    "uid": {
+                    "qq": {
                         "type": "string",
-                        "description": "目标用户UID，留空则拉黑对话者",
+                        "description": "目标用户qq，留空则拉黑当前用户",
                     },
                     "reason": {"type": "string", "description": "封禁该用户的原因"},
                     "minute": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "拉黑时长（分钟），不填则随机1-100分钟",
                     },
                 },
                 "required": ["reason"],
             },
-            func=self.Ban,
         )
 
-    async def Ban(
+    async def func(
         self,
         session,
         uid: str | None = None,
@@ -55,7 +54,7 @@ class BanTool(Tool):
             return f"拉黑用户失败, 原因: {e!s}"
 
 
-class UnBanTool(Tool):
+class UnBanTool(AbstractTool):
     """取消拉黑用户的工具"""
 
     def __init__(self):
@@ -65,17 +64,15 @@ class UnBanTool(Tool):
             parameters={
                 "type": "object",
                 "properties": {
-                    "uid": {
+                    "qq": {
                         "type": "string",
-                        "description": "目标用户UID，留空则取消对话者的拉黑",
+                        "description": "目标用户qq，留空则取消当前用户的拉黑",
                     },
                 },
                 "required": [],
             },
-            func=self.UnBan,
         )
-
-    async def UnBan(self, session, uid: str | None = None) -> str:
+    async def func(self, session, uid: str | None = None) -> str:
         uid = str(uid or session.user.id)
         return (
             "取消拉黑用户成功"

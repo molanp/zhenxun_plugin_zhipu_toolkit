@@ -4,21 +4,16 @@ import os
 import random
 from typing import Any
 
-from nonebot import require
-import ujson
-
-from zhenxun.models.chat_history import ChatHistory
-
-require("nonebot_plugin_alconna")
-require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, Video
-from nonebot_plugin_uninfo import Session
+from nonebot_plugin_uninfo import Uninfo
+import ujson
 from zai import ZhipuAiClient as ZhipuAI
 from zai.types.chat.chat_completion import CompletionMessage, CompletionMessageToolCall
 
 from zhenxun.configs.config import BotConfig, Config
 from zhenxun.configs.path_config import IMAGE_PATH
 from zhenxun.models.ban_console import BanConsole
+from zhenxun.models.chat_history import ChatHistory
 from zhenxun.services.log import logger
 from zhenxun.utils.rules import ensure_group
 
@@ -75,7 +70,7 @@ async def check_video_task_status(task_id: str, action: type[AlconnaMatcher]):
 
 class ChatManager:
     @classmethod
-    async def normal_chat_result(cls, msg: UniMessage, session: Session) -> str:
+    async def normal_chat_result(cls, msg: UniMessage, session: Uninfo) -> str:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
                 uid = session.user.id
@@ -204,7 +199,7 @@ class ChatManager:
         return await ZhipuChatHistory.get_history(uid)
 
     @classmethod
-    async def call_impersonation_ai(cls, session: Session):
+    async def call_impersonation_ai(cls, session: Uninfo):
         gid = session.scene.id
 
         rows = (
@@ -224,6 +219,7 @@ class ChatManager:
         # 本地缓存相同 (bot_id,user_id,group_id) 的用户名，避免重复查询
         def _key_from_row(r):
             return (r["bot_id"], r["user_id"], r["group_id"])
+
         unique_keys = {}
         tasks = []
         for r in rows:
@@ -288,7 +284,7 @@ class ChatManager:
         uid: str,
         model: str,
         messages: list[dict[str, str]],
-        session: Session,
+        session: Uninfo,
         impersonation: bool = False,
         use_tool: bool = True,
     ) -> ZhipuResult:
@@ -356,7 +352,7 @@ class ChatManager:
     async def parse_function_call(
         cls,
         uid: str,
-        session: Session,
+        session: Uninfo,
         tools: list[CompletionMessageToolCall] | None,
     ):
         if tools:
@@ -385,7 +381,7 @@ class ChatManager:
 
 class ImpersonationStatus:
     @classmethod
-    async def check(cls, session: Session) -> bool:
+    async def check(cls, session: Uninfo) -> bool:
         return ChatConfig.get(
             "IMPERSONATION_MODE"
         ) is True and session.scene.id not in ChatConfig.get("IMPERSONATION_BAN_GROUP")

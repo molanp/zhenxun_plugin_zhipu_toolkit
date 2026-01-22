@@ -23,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="3.2",
+        version="3.3",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -52,7 +52,9 @@ __plugin_meta__ = PluginMetadata(
                 key="IS_MULTIMODAL",
                 value=False,
                 type=bool,
-                help="对话模型是否为多模态模型(指GLM-4.1V-Thinking-Flash, GLM-4V-Plus-0111, GLM-4.1V-Thinking-Flash, GLM-4.5V模型)，启用后忽略图像理解模型配置项",
+                help="对话模型是否为多模态模型(指GLM-4.1V-Thinking-Flash, "
+                "GLM-4V-Plus-0111, GLM-4.1V-Thinking-Flash, GLM-4.5V模型)"
+                "，启用后忽略图像理解模型配置项",
                 default_value=False,
             ),
             RegisterConfig(

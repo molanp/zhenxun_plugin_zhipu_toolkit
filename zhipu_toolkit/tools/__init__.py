@@ -1,18 +1,19 @@
 import asyncio
 import importlib
 import inspect
-import logging
 import pkgutil
 from typing import Any, ClassVar
 
-from nonebot_plugin_uninfo import Session
+from nonebot_plugin_uninfo import Uninfo
 import ujson
 
-from ._model import Tool
+from zhenxun.services.log import logger
+
+from .AbstractTool import AbstractTool
 
 
 class ToolsManager:
-    tools_registry: ClassVar[dict[str, "Tool"]] = {}
+    tools_registry: ClassVar[dict[str, AbstractTool]] = {}
     _lock = asyncio.Lock()
 
     @classmethod
@@ -36,34 +37,32 @@ class ToolsManager:
         ]
 
     @classmethod
-    async def call_func(cls, session: Session, name: str, args: str) -> Any:
+    async def call_func(cls, session: Uninfo, name: str, args: str) -> Any:
         """Call the function of the specified tool."""
         await cls.init()
         tool = cls.tools_registry.get(name)
         if tool is None:
             raise ValueError(f"Tool '{name}' not found in the registry.")
-        if tool.func is None or not callable(tool.func):
-            raise ValueError(f"Tool '{name}' has no valid function.")
 
         func = tool.func
         sig = inspect.signature(func)
         parameters = sig.parameters
 
-        has_session = "session" in parameters
         try:
             kwargs = ujson.loads(args)
         except Exception as e:
             raise ValueError(f"Invalid arguments format: {e}") from e
+        if "session" in parameters:
+            kwargs["session"] = session
 
-        call_args = {"session": session, **kwargs} if has_session else kwargs
         try:
-            return await func(**call_args)
+            return await func(**kwargs)
         except TypeError as e:
-            logging.error(f"参数类型错误: {e}")
+            logger.error("参数类型错误", e=e)
             raise
         except Exception as e:
-            logging.error(f"调用工具 {name} 失败: {e}")
-            raise
+            logger.error(f"调用工具 {name} 失败", e=e)
+            return f"调用工具失败: {type(e)},{e}"
 
     @classmethod
     async def reload_tools(cls) -> None:
@@ -85,7 +84,7 @@ class ToolsManager:
     async def _load_modules(cls) -> None:
         """Load or reload tool modules and register tools."""
         if not __path__:
-            logging.warning("Module path is empty.")
+            logger.warning("Module path is empty.")
             return
 
         for module_info in pkgutil.iter_modules(__path__):
@@ -93,6 +92,10 @@ class ToolsManager:
             module = importlib.import_module(f".{module_name}", package=__name__)
 
             for name, obj in inspect.getmembers(module):
-                if inspect.isclass(obj) and issubclass(obj, Tool) and obj is not Tool:
+                if (
+                    inspect.isclass(obj)
+                    and issubclass(obj, AbstractTool)
+                    and obj is not AbstractTool
+                ):
                     instance = obj()
                     cls.tools_registry[instance.name] = instance
