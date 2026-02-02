@@ -43,10 +43,10 @@ __plugin_meta__ = PluginMetadata(
             ),
             RegisterConfig(
                 key="CHAT_MODEL",
-                value="glm-4-flash",
+                value="glm-4.7-flash",
                 type=str,
                 help="所使用的对话模型",
-                default_value="glm-4-flash",
+                default_value="glm-4.7-flash",
             ),
             RegisterConfig(
                 key="IS_MULTIMODAL",
@@ -73,10 +73,10 @@ __plugin_meta__ = PluginMetadata(
             ),
             RegisterConfig(
                 key="IMAGE_UNDERSTANDING_MODEL",
-                value="glm-4v-flash",
+                value="glm-4.6v-flash",
                 type=str,
                 help="所使用的图像理解模型",
-                default_value="glm-4v-flash",
+                default_value="glm-4.6v-flash",
             ),
             RegisterConfig(
                 key="CHAT_MODE",
