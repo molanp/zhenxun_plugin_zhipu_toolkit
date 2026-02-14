@@ -36,17 +36,14 @@ async def msg2str(
     res = None
     for segment in msg:
         if isinstance(segment, At):
-            message += f"@[qq={segment.target}] "
+            message += f"<AT user={segment.target}> "
         elif isinstance(segment, Image):
             assert segment.url is not None
             img_url = segment.url.replace("https://", "http://")
             if is_multimodal:
                 res = base64.b64encode(await AsyncHttpx.get_content(img_url)).decode()
             else:
-                message += (
-                    f"\n![图片内容:{await generate_image_description(img_url)}]"
-                    f"({img_url})"
-                )
+                message += f"\n![#image:{await generate_image_description(img_url)}]"
         elif isinstance(segment, Text):
             message += segment.text
         else:
@@ -54,29 +51,29 @@ async def msg2str(
     return message, res
 
 
-def str2msg(message: str) -> list[Text]:
-    """
-    将字符串消息转换为消息段列表。
+# def str2msg(message: str) -> list[Text]:
+#     """
+#     将字符串消息转换为消息段列表。
 
-    该函数解析输入的字符串消息，将其中的 `@` 转换为对应的消息段，并将文本分割成每句话。
+#     该函数解析输入的字符串消息，将其中的 `@` 转换为对应的消息段，并将文本分割成每句话
 
-    :param message: 输入的字符串消息。
-    :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
-    """
-    segments = []
-    at_pattern = r"@UID ([^ ]+)|@\[uid=([^>]+)\]"
-    last_pos = 0
+#     :param message: 输入的字符串消息。
+#     :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
+#     """
+#     segments = []
+#     at_pattern = r"@UID ([^ ]+)|@\[uid=([^>]+)\]"
+#     last_pos = 0
 
-    for match in re.finditer(at_pattern, message, re.DOTALL):
-        if match.start() > last_pos:
-            segments.append(Text(message[last_pos : match.start()]))
-        uid = match.group(1) or match.group(2)
-        segments.append(At("user", uid))
-        last_pos = match.end()
-    if last_pos < len(message):
-        segments.append(Text(message[last_pos:]))
+#     for match in re.finditer(at_pattern, message, re.DOTALL):
+#         if match.start() > last_pos:
+#             segments.append(Text(message[last_pos : match.start()]))
+#         uid = match.group(1) or match.group(2)
+#         segments.append(At("user", uid))
+#         last_pos = match.end()
+#     if last_pos < len(message):
+#         segments.append(Text(message[last_pos:]))
 
-    return segments
+#     return segments
 
 
 def get_username_by_session(session: Session) -> str:
@@ -129,9 +126,9 @@ async def __split_text(text: str, pattern: str, maxsplit: int) -> list[str]:
     return re.split(pattern, text, maxsplit)
 
 
-async def split_text(text: str) -> list[tuple[list[Text], float]]:
+async def split_text(text: str) -> list[tuple[Text, float]]:
     """文本切割"""
-    results = []
+    results: list[tuple[Text, float]] = []
     max_split = ChatConfig.get("TEXT_MAX_SPLIT")
     split_list = (
         [s for s in await __split_text(text, r"[。？！\n]+", max_split) if s.strip()]
@@ -147,7 +144,7 @@ async def split_text(text: str) -> list[tuple[list[Text], float]]:
         while next_char_index < len(text) and text[next_char_index] == "？":
             r += "？"
             next_char_index += 1
-        results.append((str2msg(r), min(len(r) * 0.2, 3.0)))
+        results.append((Text(r), min(len(r) * 0.2, 3.0)))
 
     return results
 
@@ -156,22 +153,21 @@ def format_usr_msg(username: str, session: Uninfo, msg: str) -> str:
     """\n"""
     return (
         "<META_DATA>\n"
-        f"当前时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        f"对话者昵称: {username}\n"
-        f"对话者UID: {session.user.id}\n"
+        f"Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"Name: {username}\n"
+        f"Uid: {session.user.id}\n"
         "</META_DATA>\n"
         f"{msg}"
     )
 
 
-def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list[Text]:
+def extract_message_content(msg: str | None) -> str:
     """
     从格式化的消息中提取实际的消息内容
 
     参数:
 
     - msg (str): 格式化的消息字符串。
-    - to_msg (bool): 是否直接转换为msg对象
 
     返回:
 
@@ -191,7 +187,7 @@ def extract_message_content(msg: str | None, to_msg: bool = False) -> str | list
     match = pattern.match(msg.strip())
     message = match["message"].strip() if match else msg.strip()
     message = message.rstrip("。")
-    return str2msg(message) if to_msg else message
+    return message
 
 
 async def get_username(bot_id: str, uid: str, group_id: str | None = None) -> str:

@@ -1,46 +1,39 @@
-from nonebot_plugin_uninfo import Uninfo
-
 from ..utils.QQApi import QQApi
 from .AbstractTool import AbstractTool
 
 
 class QQZoneTool(AbstractTool):
-    def __init__(self):
-        super().__init__(
-            name="qqZoneTool",
-            description=(
-                "这是一个可以实现你发送或者删除qq空间说说的工具，当你觉得对话很有趣或者值"
-                "得记录的时候可以调用实现发送说说(对话时主动调用可以稍微积极一些)，用户明"
-                "确提出删除qq空间说说时你可以调用该工具删除说说，但是用户主动提出发送说说"
-                "时你不能调用(发送说说只能你自己觉的可以调用时再主动调用)"
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "text": {
-                        "type": "string",
-                        "description": (
-                            "你将要发送到qq空间说说的内容(以发送者的角度生成流畅通顺的内容)"
-                        ),
-                    },
-                    "type": {
-                        "type": "boolean",
-                        "description": "是否是删除说说",
-                        "default": False,
-                    },
-                    "pos": {
-                        "type": "number",
-                        "description": "删除第几个说说",
-                        "default": 1,
-                    },
-                },
-                "required": ["text"],
+    name = "qqZoneTool"
+    description = (
+        "这是一个可以实现你发送或者删除qq空间说说的工具，当你觉得对话很有趣或者值"
+        "得记录的时候可以调用实现发送说说(对话时主动调用可以稍微积极一些)，用户明"
+        "确提出删除qq空间说说时你可以调用该工具删除说说，但是用户主动提出发送说说"
+        "时你不能调用(发送说说只能你自己觉得可以调用时再主动调用)"
+    )
+    parameters = {  # noqa: RUF012
+        "type": "object",
+        "properties": {
+            "text": {
+                "type": "string",
+                "description": (
+                    "你将要发送到qq空间说说的内容(以发送者的角度生成流畅通顺的内容)"
+                ),
             },
-        )
+            "type": {
+                "type": "boolean",
+                "description": "是否是删除说说",
+                "default": False,
+            },
+            "pos": {
+                "type": "number",
+                "description": "删除第几个说说",
+                "default": 1,
+            },
+        },
+        "required": ["text"],
+    }
 
-    async def func(
-        self, session: Uninfo, text: str = "", type: bool = False, pos: int = 1
-    ):
+    async def func(self, session, text: str = "", type: bool = False, pos: int = 1):
         if not type:
             try:
                 if not text:

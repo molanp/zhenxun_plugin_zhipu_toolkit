@@ -32,12 +32,19 @@ class ToolsManager:
         if not cls.tools_registry:
             return
         return [
-            {"type": "function", "function": tool.to_dict()}
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.parameters,
+                },
+            }
             for tool in cls.tools_registry.values()
         ]
 
     @classmethod
-    async def call_func(cls, session: Uninfo, name: str, args: str) -> Any:
+    async def call_func(cls, session: Uninfo, name: str, args: str) -> str:
         """Call the function of the specified tool."""
         await cls.init()
         tool = cls.tools_registry.get(name)
@@ -58,10 +65,10 @@ class ToolsManager:
         try:
             return await func(**kwargs)
         except TypeError as e:
-            logger.error("参数类型错误", e=e)
-            raise
+            logger.error("参数类型错误", "zhipu_toolkit.tools", e=e)
+            return "调用工具失败: 参数数量不符"
         except Exception as e:
-            logger.error(f"调用工具 {name} 失败", e=e)
+            logger.error(f"调用工具 {name} 失败", "zhipu_toolkit.tools", e=e)
             return f"调用工具失败: {type(e)},{e}"
 
     @classmethod

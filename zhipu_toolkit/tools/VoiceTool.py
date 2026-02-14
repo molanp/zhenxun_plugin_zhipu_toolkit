@@ -18,26 +18,21 @@ def random_str():
 
 
 class VoiceTool(AbstractTool):
-    def __init__(self):
-        super().__init__(
-            name="voiceTool",
-            description=(
-                "这是一个实现你发送语音功能的工具，平常正常对话时、当你想发送语音时，调用此工具。"
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "text": {
-                        "type": "string",
-                        "description": (
-                            "你想发送的语音文字(注意不要包含颜文字等内容，"
-                            "只要纯文字，颜文字等内容会使语音转文字出问题，如果有英文单词或字母尝试用中文谐音代替)"
-                        ),
-                    }
-                },
-                "required": ["text"],
-            },
-        )
+    name = "voiceTool"
+    description = "这是一个实现你发送语音功能的工具，平常正常对话时、当你想发送语音时，调用此工具。"  # noqa: E501
+    parameters = {  # noqa: RUF012
+        "type": "object",
+        "properties": {
+            "text": {
+                "type": "string",
+                "description": (
+                    "你想发送的语音文字(注意不要包含颜文字等内容，"
+                    "只要纯文字，颜文字等内容会使语音转文字出问题，如果有英文单词或字母尝试用中文谐音代替)"
+                ),
+            }
+        },
+        "required": ["text"],
+    }
 
     async def func(self, session: Uninfo, text: str) -> str:
         if not text.strip():

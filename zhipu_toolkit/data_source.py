@@ -1,12 +1,11 @@
 import asyncio
 import datetime
 import os
+from pathlib import Path
 import random
-from typing import Any
 
 from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, Video
 from nonebot_plugin_uninfo import Uninfo
-import ujson
 from zai import ZhipuAiClient as ZhipuAI
 from zai.types.chat.chat_completion import CompletionMessage, CompletionMessageToolCall
 
@@ -30,7 +29,7 @@ from .utils import (
 )
 
 
-def hello() -> list:
+def hello() -> tuple[str, Path]:
     """一些打招呼的内容"""
     result = random.choice(
         [
@@ -42,7 +41,7 @@ def hello() -> list:
         ]
     )
     img = random.choice(os.listdir(IMAGE_PATH / "zai"))
-    return [result, IMAGE_PATH / "zai" / img]
+    return result, IMAGE_PATH / "zai" / img
 
 
 async def check_video_task_status(task_id: str, action: type[AlconnaMatcher]):
@@ -137,7 +136,6 @@ class ChatManager:
             )
             await cls.add_anytype_message(uid, result.message)  # type: ignore
         answer = extract_message_content(result.content)
-        assert isinstance(answer, str)
         logger.info(
             f"USERNAME `{username}` 问题：{message} ---- 回答：{answer}",
             "zhipu_toolkit",
@@ -172,13 +170,12 @@ class ChatManager:
         )
 
     @classmethod
-    async def add_tool_call_message(cls, uid: str, content: Any, tool_id: str) -> None:
-        serialized = content if isinstance(content, dict) else {"result": str(content)}
+    async def add_tool_call_message(cls, uid: str, content: str, tool_id: str) -> None:
         await ZhipuChatHistory.create(
             uid=uid,
             role="tool",
             tool_call_id=tool_id,
-            content=ujson.dumps(serialized, ensure_ascii=False),
+            content=content,
         )
 
     @classmethod
