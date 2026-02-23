@@ -243,7 +243,6 @@ class ChatManager:
             date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             name=BotConfig.self_nickname,
             uid=session.self_id,
-            soul=await get_prompt(),
         )
         result = await cls.get_zhipu_result(
             get_request_id(),

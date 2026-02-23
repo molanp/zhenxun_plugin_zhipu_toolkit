@@ -32,7 +32,7 @@ DEFAULT_PROMPT = (
 
 IMPERSONATION_PROMPT = """
 【任务基本信息】
-- 角色：<name>{name}</name>(UID: <uid>{uid}</uid>)
+- 角色：<name>{name}</name>(<uid>{uid}</uid>)
 - 时间：<date>{date}</date>
 
 【任务规则】
@@ -55,11 +55,6 @@ IMPERSONATION_PROMPT = """
 - 有概率根据回复的语境加入合适 emoji 帮助表达
 - 有概率使用某些流行的拼音缩写
 - 有概率玩谐音梗
-
-【人设信息】
-<soul>
-{soul}
-</soul>
 """
 
 
