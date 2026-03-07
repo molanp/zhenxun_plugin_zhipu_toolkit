@@ -2,7 +2,9 @@ import random
 
 from nonebot import get_bot
 
+from zhenxun.models.level_user import LevelUser
 from zhenxun.utils.platform import PlatformUtils
+from zhenxun.utils.rules import ensure_group
 
 from .AbstractTool import AbstractTool
 
@@ -35,9 +37,14 @@ class MuteTool(AbstractTool):
     async def func(
         self, session, uid: str | None = None, minute: int | None = None
     ) -> str:
+        if not ensure_group(session):
+            return "不是群聊环境，不能执行此操作"
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
         uid = str(uid or session.user.id)
+        level = await LevelUser.get_user_level(session.user.id, gid)
+        if level < 5 and uid != session.user.id:
+            return "用户权限不足，不能执行此操作"
 
         mute_time = minute or random.randint(1, 100)
         try:
@@ -64,9 +71,14 @@ class UnMuteTool(AbstractTool):
     }
 
     async def func(self, session, uid: str | None = None) -> str:
+        if not ensure_group(session):
+            return "不是群聊环境，不能执行此操作"
         bot = get_bot(self_id=session.self_id)
         gid = session.scene.id
         uid = str(uid or session.user.id)
+        level = await LevelUser.get_user_level(session.user.id, gid)
+        if level < 5 and uid != session.user.id:
+            return "用户权限不足，不能执行此操作"
         try:
             await PlatformUtils.ban_user(bot, uid, gid, 0)
             return f"取消禁言用户{uid} 成功"
