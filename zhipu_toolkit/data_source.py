@@ -5,6 +5,7 @@ from pathlib import Path
 import random
 
 from nonebot_plugin_alconna import AlconnaMatcher, Text, UniMessage, Video
+from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_uninfo import Uninfo
 from zai import ZhipuAiClient as ZhipuAI
 from zai.types.chat.chat_completion import CompletionMessage, CompletionMessageToolCall
@@ -27,6 +28,41 @@ from .utils import (
     get_username_by_session,
     msg2str,
 )
+
+# ==== 简单的内存缓存，用于减少 normal_chat 频繁扫数据库 ====
+
+# 每个 uid 的对话缓存：
+#   uid -> { "last_access": datetime, "data": list[dict] }
+_CHAT_HISTORY_CACHE: dict[str, dict] = {}
+# 缓存有效期：多久没有访问就认为过期，自动丢弃
+CHAT_HISTORY_TTL_SECONDS = 30 * 60  # 30 分钟
+# 每个 uid 最多保留多少条历史记录，防止内存无限增长
+CHAT_HISTORY_MAX_LEN = 200
+
+
+def _prune_history_cache() -> None:
+    """清理超过 TTL 未访问的缓存，避免内存常驻过多 uid。"""
+    if not _CHAT_HISTORY_CACHE:
+        return
+    now = datetime.datetime.now()
+    to_delete = []
+    for uid, info in _CHAT_HISTORY_CACHE.items():
+        last_access: datetime.datetime = info.get("last_access", now)
+        if (now - last_access).total_seconds() > CHAT_HISTORY_TTL_SECONDS:
+            to_delete.append(uid)
+    for uid in to_delete:
+        _CHAT_HISTORY_CACHE.pop(uid, None)
+    if to_delete:
+        logger.debug(
+            f"normal_chat 缓存清理: 移除 {len(to_delete)} 个 uid 的历史缓存",
+            "zhipu_toolkit",
+        )
+
+
+@scheduler.scheduled_job("interval", minutes=20, id="zhipu_normal_chat_cache_prune")
+async def _prune_history_cache_job() -> None:
+    """定时任务：周期性清理 normal_chat 的内存缓存."""
+    _prune_history_cache()
 
 
 def hello() -> tuple[str, Path]:
@@ -69,6 +105,100 @@ async def check_video_task_status(task_id: str, action: type[AlconnaMatcher]):
 
 class ChatManager:
     @classmethod
+    def _build_user_record(cls, content: str, res_url: str | None = None) -> dict:
+        """构造一条 user 记录（仅内存使用，不直接写 DB）"""
+        return {
+            "role": "user",
+            "content": content,
+            "res_url": res_url,
+            "tool_calls": None,
+            "tool_call_id": None,
+        }
+
+    @classmethod
+    def _build_assistant_record(
+        cls,
+        message: CompletionMessage,
+    ) -> dict:
+        """构造一条 assistant 记录（仅内存使用，不直接写 DB）"""
+        tool_calls_serialized = (
+            [call.model_dump() for call in message.tool_calls]
+            if message.tool_calls
+            else None
+        )
+        return {
+            "role": message.role,
+            "content": message.content,
+            "res_url": None,
+            "tool_calls": tool_calls_serialized,
+            "tool_call_id": getattr(message, "tool_call_id", None),
+        }
+
+    @classmethod
+    def _build_tool_record(cls, content: str, tool_id: str) -> dict:
+        """构造一条 tool 调用记录（仅内存使用，不直接写 DB）"""
+        return {
+            "role": "tool",
+            "content": content,
+            "res_url": None,
+            "tool_calls": None,
+            "tool_call_id": tool_id,
+        }
+
+    @classmethod
+    async def _flush_round_history(cls, uid: str, records: list[dict]) -> None:
+        """将一轮对话（用户 + 模型返回 + 工具调用）写入数据库并同步更新缓存。
+
+        前提:
+            - 调用方保证只有在模型返回结构正常时才调用。
+        """
+        if not records:
+            return
+
+        # 1. 顺序写入数据库
+        for rec in records:
+            await ZhipuChatHistory.create(
+                uid=uid,
+                role=rec["role"],
+                content=rec["content"],
+                res_url=rec.get("res_url"),
+                tool_calls=rec.get("tool_calls"),
+                tool_call_id=rec.get("tool_call_id"),
+            )
+
+        # 2. 同步更新内存缓存
+        now = datetime.datetime.now()
+        cache_info = _CHAT_HISTORY_CACHE.get(uid)
+        if cache_info is None:
+            # 让下一次 get_chat_history 从 DB 重新加载即可
+            return
+
+        history: list = cache_info.get("data", [])
+        # 这里 history 的结构是 get_history 返回的那种形式：
+        # {"role":..., "content":(str or list[mix]),"tool_call_id":..., "tool_calls":...}  # noqa: E501
+        for rec in records:
+            if rec.get("res_url"):
+                content = [
+                    {"type": "text", "text": rec["content"]},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": rec["res_url"]},
+                    },
+                ]
+            else:
+                content = rec["content"]
+            history.append(
+                {
+                    "role": rec["role"],
+                    "content": content,
+                    "tool_call_id": rec.get("tool_call_id"),
+                    "tool_calls": rec.get("tool_calls"),
+                }
+            )
+        cache_info["data"] = history[-CHAT_HISTORY_MAX_LEN:]
+        cache_info["last_access"] = now
+
+    @classmethod
     async def normal_chat_result(cls, msg: UniMessage, session: Uninfo) -> str:
         match ChatConfig.get("CHAT_MODE"):
             case "user":
@@ -84,8 +214,8 @@ class ChatManager:
                 uid = "mix_mode"
             case _:
                 raise ValueError("CHAT_MODE must be 'user', 'group' or 'all'")
+
         username = get_username_by_session(session)
-        await cls.add_system_message(uid)
         message, img_url = await msg2str(msg, bool(ChatConfig.get("IS_MULTIMODAL")))
         word_limit = ChatConfig.get("WORD_LIMIT")
         if len(message) > word_limit:
@@ -95,38 +225,57 @@ class ChatManager:
                 session=session,
             )
             return f"超出管理员设置的字数限制: {word_limit}"
-        await cls.add_user_message(
-            format_usr_msg(username, session, message), uid, img_url
+
+        # 先把用户消息构造成记录，暂存内存
+        user_rec = cls._build_user_record(
+            format_usr_msg(username, session, message), img_url
         )
+        round_records: list[dict] = [user_rec]
+        # 拿到当前历史（含 system prompt），发送给模型
         result = await cls.get_zhipu_result(
             uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
         )
+
+        # 内容审查 / 输入违规
         if result.error_code == 1:
             logger.info(
                 f"USERNAME `{username}` 问题: {message} ---- 触发内容审查",
                 "zhipu_toolkit",
                 session=session,
             )
-            await ZhipuChatHistory.delete_latest_record(uid)
+            # 不写入任何历史，直接返回提示
             return result.content  # pyright: ignore[reportReturnType]
+
+        # 模型内部错误
         if result.error_code == 2:
             logger.error(
                 f"获取结果失败 e:{result.content}", "zhipu_toolkit", session=session
             )
-            await ZhipuChatHistory.delete_latest_record(uid)
             return f"出错了: {result.content}"
+
+        # 不应出现的情况：message 为空
         if result.message is None:
             logger.error(
                 f"Missing result.message for uid: {uid}, returning error."
                 f"Result content: {result.content}"
             )
-            await ZhipuChatHistory.delete_latest_record(uid)
             return f"出错了: {result.content}"
-        await cls.add_anytype_message(uid, result.message)
+
+        # 模型第一次回复（可能带 tool_calls），先暂存
+        round_records.append(cls._build_assistant_record(result.message))
+
+        # 工具调用：执行成功则增加 tool 记录 + 第二次模型回复
         tool_result = await cls.parse_function_call(
             uid, session, result.message.tool_calls
         )
-        if tool_result is not None:
+        if tool_result and result.message.tool_calls:
+            # 工具执行结果记为 tool 角色的一条记录
+            first_tool_call = result.message.tool_calls[0]
+            round_records.append(
+                cls._build_tool_record(tool_result, first_tool_call.id)
+            )
+
+            # 带工具结果，再次调用模型
             result = await cls.get_zhipu_result(
                 uid,
                 ChatConfig.get("CHAT_MODEL"),
@@ -134,7 +283,21 @@ class ChatManager:
                 session,
                 use_tool=False,
             )
-            await cls.add_anytype_message(uid, result.message)  # type: ignore
+
+            # 这里也只在返回结构正常时才追加到 round_records
+            if result.error_code != 0 or result.message is None:
+                logger.error(
+                    f"工具链第二次调用模型失败: {result.content}",
+                    "zhipu_toolkit",
+                    session=session,
+                )
+                return f"出错了: {result.content}"
+
+            round_records.append(cls._build_assistant_record(result.message))
+
+        # 到这里，整轮对话都是“结构正常”的，可以一次性写入 DB + 缓存
+        await cls._flush_round_history(uid, round_records)
+
         answer = extract_message_content(result.content)
         logger.info(
             f"USERNAME `{username}` 问题：{message} ---- 回答：{answer}",
@@ -144,56 +307,41 @@ class ChatManager:
         return answer
 
     @classmethod
-    async def add_user_message(
-        cls, content: str, uid: str, res_url: str | None = None
-    ) -> None:
-        await ZhipuChatHistory.create(
-            uid=uid,
-            role="user",
-            content=content,
-            res_url=res_url,
-        )
-
-    @classmethod
-    async def add_anytype_message(cls, uid: str, message: CompletionMessage) -> None:
-        tool_calls_serialized = (
-            [call.model_dump() for call in message.tool_calls]
-            if message.tool_calls
-            else None
-        )
-        await ZhipuChatHistory.create(
-            uid=uid,
-            role=message.role,
-            content=message.content,
-            tool_calls=tool_calls_serialized,
-            tool_call_id=getattr(message, "tool_call_id", None),
-        )
-
-    @classmethod
-    async def add_tool_call_message(cls, uid: str, content: str, tool_id: str) -> None:
-        await ZhipuChatHistory.create(
-            uid=uid,
-            role="tool",
-            tool_call_id=tool_id,
-            content=content,
-        )
-
-    @classmethod
-    async def add_system_message(cls, uid: str) -> None:
-        if not await ZhipuChatHistory.filter(uid=uid, role="system").exists():
-            soul = await get_prompt()
-            await ZhipuChatHistory.create(
-                uid=uid, role="system", content=soul, platform="system"
-            )
-
-    @classmethod
     async def clear_history(cls, uid: str | None = None) -> int:
+        """清理历史记录，并同步清空内存缓存。"""
+        if uid is None:
+            _CHAT_HISTORY_CACHE.clear()
+        else:
+            _CHAT_HISTORY_CACHE.pop(uid, None)
         return await ZhipuChatHistory.clear_history(uid)
 
     @classmethod
     async def get_chat_history(cls, uid: str) -> list[dict]:
-        """统一获取对话历史的入口"""
-        return await ZhipuChatHistory.get_history(uid)
+        """统一获取对话历史的入口，带内存缓存 + TTL。
+
+        行为:
+            - 若缓存中存在并且在 TTL 内，则直接返回缓存中的历史；
+            - 否则从数据库加载最近若干条记录，写入缓存并返回。
+        """
+        now = datetime.datetime.now()
+        if cache_info := _CHAT_HISTORY_CACHE.get(uid):
+            last_access: datetime.datetime = cache_info.get("last_access", now)
+            if (now - last_access).total_seconds() <= CHAT_HISTORY_TTL_SECONDS:
+                # 缓存有效，更新访问时间并返回
+                cache_info["last_access"] = now
+                data: list = cache_info.get("data", [])
+                data.insert(0, {"role": "system", "content": await get_prompt()})
+                return data
+
+        # 缓存不存在或已过期，从数据库获取完整历史
+        history = await ZhipuChatHistory.get_history(uid)
+        # 写入缓存，截断长度避免无限增长
+        _CHAT_HISTORY_CACHE[uid] = {
+            "last_access": now,
+            "data": history[-CHAT_HISTORY_MAX_LEN:],
+        }
+        history.insert(0, {"role": "system", "content": await get_prompt()})
+        return history
 
     @classmethod
     async def call_impersonation_ai(cls, session: Uninfo):
@@ -360,11 +508,9 @@ class ChatManager:
                     "zhipu_toolkit",
                     session=session,
                 )
-                result = await ToolsManager.call_func(
+                return await ToolsManager.call_func(
                     session, tool_call.function.name, args
                 )
-                await cls.add_tool_call_message(uid, result, tool_call.id)
-                return result
             except Exception as e:
                 logger.error(
                     f"UID {uid} 工具调用失败",
