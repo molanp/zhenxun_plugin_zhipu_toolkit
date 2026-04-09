@@ -59,41 +59,55 @@ PROMPT: str = ""
 _PROMPT_MTIME: float | None = None
 
 
-async def _load_prompt_from_file() -> str:
-    """真正从文件读取 PROMPT 的内部工具函数，不做调度，只负责读取和初始化文件。"""
-    global _PROMPT_MTIME
+async def _load_prompt_from_file() -> tuple[str, float]:
+    """真正从文件读取 PROMPT 的内部工具函数，只负责文件 I/O，保持纯函数。
 
-    try:
-        async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
-            content = await f.read()
-        # 同步记录当前文件的 mtime，供后续比对
-        _PROMPT_MTIME = PROMPT_FILE.stat().st_mtime
-        return content
-    except FileNotFoundError:
-        logger.warning("PROMPT文件不存在，正在初始化...", "zhipu_toolkit")
-        async with aiofiles.open(PROMPT_FILE, "w", encoding="utf-8") as f:
-            await f.write(DEFAULT_PROMPT)
-        # 初始化时，同样记录 mtime
-        _PROMPT_MTIME = PROMPT_FILE.stat().st_mtime
-        return DEFAULT_PROMPT
-    except Exception as e:
-        logger.error(
-            "PROMPT读取失败，使用 PROMPT or DEFAULT_PROMPT", "zhipu_toolkit", e=e
-        )
-        # 出错时不更新 mtime，保持上一次有效值
-        return PROMPT or DEFAULT_PROMPT
+    返回:
+        tuple[str, float]: (文件内容, 文件最近修改时间 mtime)。
+    """
+    async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
+        content = await f.read()
+    mtime = PROMPT_FILE.stat().st_mtime
+    return content, mtime
 
 
-async def init_prompt() -> None:
-    """在插件加载/启动时调用的一次性初始化函数。
+async def _refresh_prompt(force: bool = False) -> str:
+    """统一刷新 PROMPT 的入口，负责是否读文件、更新全局状态并封装异常处理。
 
     行为:
-        - 如果 PROMPT_FILE 不存在，会创建并写入 DEFAULT_PROMPT；
-        - 把文件内容读入并赋值给全局 PROMPT；
-        - 记录当前 mtime，供后续定时任务检测变化。
+        - 当 force=True 时，无视 mtime 直接从文件读取并更新 PROMPT 与 _PROMPT_MTIME；
+        - 当 force=False 时，仅在检测到文件存在且 mtime 变化时才重新读取；
+        - 如果文件不存在，则创建并写入 DEFAULT_PROMPT，再加载；
+        - 任何异常情况下都不会清空 PROMPT，而是返回已有 PROMPT 或 DEFAULT_PROMPT。
     """
-    global PROMPT
-    PROMPT = await _load_prompt_from_file()
+    global PROMPT, _PROMPT_MTIME
+
+    try:
+        if not PROMPT_FILE.exists():
+            logger.warning("PROMPT文件不存在，正在初始化...", "zhipu_toolkit")
+            async with aiofiles.open(PROMPT_FILE, "w", encoding="utf-8") as f:
+                await f.write(DEFAULT_PROMPT)
+            PROMPT, _PROMPT_MTIME = DEFAULT_PROMPT, PROMPT_FILE.stat().st_mtime
+            return PROMPT
+
+        current_mtime = PROMPT_FILE.stat().st_mtime
+
+        # 如果不强制刷新且 mtime 未变化，则直接返回当前 PROMPT
+        if not force and _PROMPT_MTIME is not None and current_mtime == _PROMPT_MTIME:
+            return PROMPT or DEFAULT_PROMPT
+
+        # 需要从文件读取
+        content, mtime = await _load_prompt_from_file()
+        PROMPT = content
+        _PROMPT_MTIME = mtime
+        return PROMPT
+    except Exception as e:
+        logger.error(
+            "PROMPT 刷新失败，使用现有 PROMPT 或 DEFAULT_PROMPT",
+            "zhipu_toolkit",
+            e=e,
+        )
+        return PROMPT or DEFAULT_PROMPT
 
 
 @scheduler.scheduled_job("interval", minutes=30, id="zhipu_sync_prompt_job")
@@ -104,29 +118,12 @@ async def sync_prompt_job() -> None:
         - 仅在文件 mtime 变化时才重新读取；
         - 读取失败不会清空 PROMPT，而是保留旧值。
     """
-    global PROMPT, _PROMPT_MTIME
-
-    try:
-        if not PROMPT_FILE.exists():
-            # 如果文件被手动删了，重新初始化
-            logger.warning("PROMPT文件被删除，重新初始化...", "zhipu_toolkit")
-            PROMPT = await _load_prompt_from_file()
-            logger.info("PROMPT 文件已重新初始化并同步到内存", "zhipu_toolkit")
-            return
-
-        current_mtime = PROMPT_FILE.stat().st_mtime
-        if _PROMPT_MTIME is not None and current_mtime == _PROMPT_MTIME:
-            # 文件未修改，跳过
-            logger.debug("PROMPT文件未修改，跳过同步", "zhipu_toolkit")
-            return
-
-        # 文件有变化，重新加载
-        new_prompt = await _load_prompt_from_file()
-        PROMPT = new_prompt
+    old_prompt = PROMPT
+    new_prompt = await _refresh_prompt(force=False)
+    if new_prompt != old_prompt:
         logger.info("PROMPT 文件有更新，已同步到内存", "zhipu_toolkit")
-    except Exception as e:
-        # 避免定时任务异常中断，保留旧 PROMPT
-        logger.error("PROMPT同步任务出错，保留现有 PROMPT", "zhipu_toolkit", e=e)
+    else:
+        logger.debug("PROMPT文件未修改，跳过同步", "zhipu_toolkit")
 
 
 async def get_prompt() -> str:
@@ -134,14 +131,13 @@ async def get_prompt() -> str:
 
     行为:
         - 如果全局 PROMPT 为空（例如系统刚启动还没调用 init_prompt），会尝试加载一次；
-        - 正常情况下直接返回内存中的 PROMPT。
+        - 正常情况下直接返回内存中的 PROMPT，并在需要时由 _refresh_prompt 负责更新。
     """
-    global PROMPT
-
     if not PROMPT:
         # 懒加载兜底：在未显式初始化时也能工作
-        PROMPT = await _load_prompt_from_file()
+        prompt = await _refresh_prompt(force=True)
         logger.info("get_prompt 懒加载 PROMPT 完成", "zhipu_toolkit")
+        return prompt
 
     return PROMPT
 

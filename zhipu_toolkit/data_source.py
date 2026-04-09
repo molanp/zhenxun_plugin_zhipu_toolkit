@@ -233,7 +233,10 @@ class ChatManager:
         round_records: list[dict] = [user_rec]
         # 拿到当前历史（含 system prompt），发送给模型
         result = await cls.get_zhipu_result(
-            uid, ChatConfig.get("CHAT_MODEL"), await cls.get_chat_history(uid), session
+            uid,
+            ChatConfig.get("CHAT_MODEL"),
+            (await cls.get_chat_history(uid)) + round_records,
+            session,
         )
 
         # 内容审查 / 输入违规
@@ -268,7 +271,7 @@ class ChatManager:
         tool_result = await cls.parse_function_call(
             uid, session, result.message.tool_calls
         )
-        if tool_result and result.message.tool_calls:
+        if tool_result is not None and result.message.tool_calls:
             # 工具执行结果记为 tool 角色的一条记录
             first_tool_call = result.message.tool_calls[0]
             round_records.append(
@@ -279,7 +282,7 @@ class ChatManager:
             result = await cls.get_zhipu_result(
                 uid,
                 ChatConfig.get("CHAT_MODEL"),
-                await cls.get_chat_history(uid),
+                await cls.get_chat_history(uid) + round_records,
                 session,
                 use_tool=False,
             )
@@ -330,8 +333,7 @@ class ChatManager:
                 # 缓存有效，更新访问时间并返回
                 cache_info["last_access"] = now
                 data: list = cache_info.get("data", [])
-                data.insert(0, {"role": "system", "content": await get_prompt()})
-                return data
+                return [{"role": "system", "content": await get_prompt()}] + data
 
         # 缓存不存在或已过期，从数据库获取完整历史
         history = await ZhipuChatHistory.get_history(uid)
@@ -340,8 +342,7 @@ class ChatManager:
             "last_access": now,
             "data": history[-CHAT_HISTORY_MAX_LEN:],
         }
-        history.insert(0, {"role": "system", "content": await get_prompt()})
-        return history
+        return [{"role": "system", "content": await get_prompt()}] + history
 
     @classmethod
     async def call_impersonation_ai(cls, session: Uninfo):
