@@ -45,15 +45,6 @@ from .rule import need_byd, need_reply
 INIT = True
 
 
-@scheduler.scheduled_job("interval", minutes=30, max_instances=3)
-async def sync_system_prompt():
-    try:
-        updated = await ZhipuChatHistory.update_system_content(await get_prompt())
-        logger.debug(f"更新了 {updated} 条 system 记录", "zhipu_toolkit")
-    except Exception as e:
-        logger.error("同步系统提示词失败", "zhipu_toolkit", e=e)
-
-
 @scheduler.scheduled_job(
     "cron",
     hour=0,
