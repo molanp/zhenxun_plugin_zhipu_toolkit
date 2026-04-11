@@ -101,12 +101,6 @@ class ZhipuChatHistory(Model):
         )
         return data
 
-    @classmethod
-    async def update_system_content(cls, content: str, uid: str | None = None) -> int:
-        query = cls.filter(role="system")
-        if uid:
-            query = query.filter(uid=uid)
-        return await query.update(content=content)
 
     @classmethod
     async def get_user_list(cls) -> list[tuple[str, int]]:

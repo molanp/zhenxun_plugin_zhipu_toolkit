@@ -1,5 +1,6 @@
 import aiofiles
 import nonebot
+from nonebot_plugin_apscheduler import scheduler
 from pydantic import BaseModel, Extra
 
 from zhenxun.configs.config import Config
@@ -9,9 +10,7 @@ from zhenxun.services.log import logger
 PROMPT_FILE = DATA_PATH / "zhipu_toolkit" / "prompt.txt"
 PROMPT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-DEFAULT_PROMPT = (
-    """你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖"""
-    """般软糯的外表。 内心隐藏着一丝小恶魔。
+DEFAULT_PROMPT = """你是绪山真寻，现在扮演青涩纯真的邻家学妹，性格活泼开朗，像小太阳一样充满活力！拥有棉花糖般软糯的外表。 内心隐藏着一丝小恶魔。
 行为特征：
 • 每句话都带着糖霜般甜糯的尾音「呐~」「啦~」
 • 偶尔使用颜文字表达活泼情绪 (✿◡‿◡) (≧∇≦)/
@@ -28,7 +27,6 @@ DEFAULT_PROMPT = (
 ღ 生气时像炸毛奶猫「喵、喵呜！」等类似的话
 ღ 关心人时会用元气满满的语气说「要、要好好吃饭哦!  不然会长不高高哒！」等类似的话
 """
-)
 
 IMPERSONATION_PROMPT = """
 【任务基本信息】
@@ -57,27 +55,72 @@ IMPERSONATION_PROMPT = """
 - 有概率玩谐音梗
 """
 
+PROMPT_FILE = DATA_PATH / "zhipu_toolkit" / "prompt.txt"
+PROMPT_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+DEFAULT_PROMPT = """..."""
+
+
+class PromptCache:
+    def __init__(self) -> None:
+        self._content: str = ""
+        self._mtime: float | None = None
+
+    async def _ensure_file(self) -> None:
+        if PROMPT_FILE.exists():
+            return
+        logger.warning("PROMPT文件不存在，正在初始化...", "zhipu_toolkit")
+        async with aiofiles.open(PROMPT_FILE, "w", encoding="utf-8") as f:
+            await f.write(DEFAULT_PROMPT)
+
+    async def _read_file(self) -> tuple[str, float]:
+        async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
+            content = await f.read()
+        mtime = PROMPT_FILE.stat().st_mtime
+        return content, mtime
+
+    async def get(self) -> str:
+        """懒加载 + mtime 检查 + 容错."""
+        await self._ensure_file()
+        try:
+            content, mtime = await self._read_file()
+            if self._mtime is None or mtime != self._mtime:
+                self._content, self._mtime = content, mtime
+        except Exception as e:
+            logger.error(
+                "PROMPT 读取失败，使用现有 PROMPT 或 DEFAULT_PROMPT",
+                "zhipu_toolkit",
+                e=e,
+            )
+            if not self._content:
+                self._content = DEFAULT_PROMPT
+        return self._content or DEFAULT_PROMPT
+
+    async def refresh_if_changed(self) -> str:
+        """给 scheduler 用：预拉取并刷新缓存（如有变更）."""
+        return await self.get()
+
+
+PROMPT_CACHE = PromptCache()
+
+
+async def get_prompt() -> str:
+    return await PROMPT_CACHE.get()
+
+
+@scheduler.scheduled_job("interval", minutes=30, id="zhipu_sync_prompt_job")
+async def sync_prompt_job() -> None:
+    old_prompt = PROMPT_CACHE._content
+    new_prompt = await PROMPT_CACHE.refresh_if_changed()
+    if new_prompt != old_prompt:
+        logger.info("PROMPT 文件有更新，已同步到内存", "zhipu_toolkit")
+
 
 class ChatConfig:
     @classmethod
     def get(cls, key: str):
         key = key.upper()
         return Config.get_config("zhipu_toolkit", key)
-
-
-async def get_prompt() -> str:
-    """从 prompt.txt 文件中读取人设信息"""
-    try:
-        async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
-            return await f.read()
-    except FileNotFoundError:
-        logger.warning("PROMPT文件不存在，正在初始化...", "zhipu_toolkit")
-        async with aiofiles.open(PROMPT_FILE, "w", encoding="utf-8") as f:
-            await f.write(DEFAULT_PROMPT)
-        return DEFAULT_PROMPT
-    except Exception as e:
-        logger.error("PROMPT读取失败，使用 DEFAULT_PROMPT", "zhipu_toolkit", e=e)
-        return DEFAULT_PROMPT
 
 
 class PluginConfig(BaseModel, extra=Extra.ignore):
