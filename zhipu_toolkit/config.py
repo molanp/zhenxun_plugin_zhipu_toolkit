@@ -1,4 +1,5 @@
 import aiofiles
+import contextlib
 import nonebot
 from nonebot_plugin_apscheduler import scheduler
 from pydantic import BaseModel, Extra
@@ -55,11 +56,6 @@ IMPERSONATION_PROMPT = """
 - 有概率玩谐音梗
 """
 
-PROMPT_FILE = DATA_PATH / "zhipu_toolkit" / "prompt.txt"
-PROMPT_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-DEFAULT_PROMPT = """..."""
-
 
 class PromptCache:
     def __init__(self) -> None:
@@ -81,6 +77,12 @@ class PromptCache:
 
     async def get(self) -> str:
         """懒加载 + mtime 检查 + 容错."""
+        # 如果已有内容且 mtime 已经记录，则直接返回，避免无意义的 I/O
+        if self._content and self._mtime is not None and PROMPT_FILE.exists():
+            with contextlib.suppress(Exception):
+                current_mtime = PROMPT_FILE.stat().st_mtime
+                if current_mtime == self._mtime:
+                    return self._content
         await self._ensure_file()
         try:
             content, mtime = await self._read_file()
@@ -94,11 +96,45 @@ class PromptCache:
             )
             if not self._content:
                 self._content = DEFAULT_PROMPT
-        return self._content or DEFAULT_PROMPT
+        return self._content
 
-    async def refresh_if_changed(self) -> str:
-        """给 scheduler 用：预拉取并刷新缓存（如有变更）."""
-        return await self.get()
+    async def refresh_if_changed(self) -> bool:
+        """给 scheduler 用：预拉取并刷新缓存（如有变更）。
+
+        Returns:
+            bool: True 表示内容实际发生变化，False 表示无变化或读取失败。
+        """
+        old_mtime = self._mtime
+        old_content = self._content
+
+        await self._ensure_file()
+        try:
+            # 直接读取当前文件内容和 mtime，但只在确认变化时才更新缓存
+            async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
+                new_content = await f.read()
+            new_mtime = PROMPT_FILE.stat().st_mtime
+        except Exception as e:
+            logger.error(
+                "PROMPT 刷新检查失败，保留现有 PROMPT",
+                "zhipu_toolkit",
+                e=e,
+            )
+            return False
+
+        # mtime 未变，认为无更新
+        if old_mtime is not None and new_mtime == old_mtime:
+            return False
+
+        # 内容与之前完全一致，也认为无“有效更新”
+        if new_content == old_content:
+            # 但还是要同步 mtime，避免下次重复判断
+            self._mtime = new_mtime
+            return False
+
+        # 确认有更新：同时更新内容和 mtime
+        self._content = new_content
+        self._mtime = new_mtime
+        return True
 
 
 PROMPT_CACHE = PromptCache()
@@ -110,9 +146,8 @@ async def get_prompt() -> str:
 
 @scheduler.scheduled_job("interval", minutes=30, id="zhipu_sync_prompt_job")
 async def sync_prompt_job() -> None:
-    old_prompt = PROMPT_CACHE._content
-    new_prompt = await PROMPT_CACHE.refresh_if_changed()
-    if new_prompt != old_prompt:
+    changed = await PROMPT_CACHE.refresh_if_changed()
+    if changed:
         logger.info("PROMPT 文件有更新，已同步到内存", "zhipu_toolkit")
 
 
