@@ -40,35 +40,41 @@ CHAT_HISTORY_MAX_LEN = 200
 
 
 @dataclass
+class HistoryEntry:
+    last_access: datetime.datetime
+    data: list[dict[str, Any]]
+
+
+@dataclass
 class HistoryCache:
     ttl_seconds: int
     max_len: int
-    _store: dict[str, dict[str, Any]] = field(default_factory=dict)
+    _store: dict[str, HistoryEntry] = field(default_factory=dict)
 
     def get(self, uid: str) -> list[dict] | None:
         now = datetime.datetime.now()
         info = self._store.get(uid)
         if not info:
             return None
-        if (now - info["last_access"]).total_seconds() > self.ttl_seconds:
+        if (now - info.last_access).total_seconds() > self.ttl_seconds:
             self._store.pop(uid, None)
             return None
-        info["last_access"] = now
-        return info["data"]
+        info.last_access = now
+        return info.data
 
-    def set(self, uid: str, history: list[dict]) -> None:
-        self._store[uid] = {
-            "last_access": datetime.datetime.now(),
-            "data": history[-self.max_len :],
-        }
+    def set(self, uid: str, history: list[dict[str, Any]]) -> None:
+        self._store[uid] = HistoryEntry(
+            last_access=datetime.datetime.now(),
+            data=history[-self.max_len :],
+        )
 
-    def add_records(self, uid: str, records: list[dict]) -> None:
+    def add_records(self, uid: str, records: list[dict[str, Any]]) -> None:
         if uid not in self._store:
             return
-        history = self._store[uid]["data"]
+        history = self._store[uid].data
         history.extend(records)
-        self._store[uid]["data"] = history[-self.max_len :]
-        self._store[uid]["last_access"] = datetime.datetime.now()
+        self._store[uid].data = history[-self.max_len :]
+        self._store[uid].last_access = datetime.datetime.now()
 
     def clear(self, uid: str | None = None) -> None:
         if uid is None:
@@ -81,7 +87,7 @@ class HistoryCache:
         expired = [
             uid
             for uid, info in self._store.items()
-            if (now - info["last_access"]).total_seconds() > self.ttl_seconds
+            if (now - info.last_access).total_seconds() > self.ttl_seconds
         ]
         for uid in expired:
             self._store.pop(uid, None)
@@ -96,30 +102,10 @@ class HistoryCache:
 _history_cache = HistoryCache(CHAT_HISTORY_TTL_SECONDS, CHAT_HISTORY_MAX_LEN)
 
 
-def get_cached_history(uid: str) -> list[dict] | None:
-    return _history_cache.get(uid)
-
-
-def set_cached_history(uid: str, history: list[dict]) -> None:
-    _history_cache.set(uid, history)
-
-
-def append_cached_records(uid: str, records: list[dict]) -> None:
-    _history_cache.add_records(uid, records)
-
-
-def clear_cached_history(uid: str | None = None) -> None:
-    _history_cache.clear(uid)
-
-
-def prune_history_cache() -> int:
-    return _history_cache.prune()
-
-
 @scheduler.scheduled_job("interval", minutes=100, id="zhipu_normal_chat_cache_prune")
 async def prune_history_cache_job() -> None:
     """定时任务：周期性清理 normal_chat 的内存缓存."""
-    prune_history_cache()
+    _history_cache.prune()
 
 
 def hello() -> tuple[str, Path]:
@@ -279,7 +265,7 @@ class ChatManager:
             )
 
         # 2. 同步更新内存缓存
-        append_cached_records(
+        _history_cache.add_records(
             uid,
             [
                 {
@@ -397,7 +383,7 @@ class ChatManager:
     @classmethod
     async def clear_history(cls, uid: str | None = None) -> int:
         """清理历史记录，并同步清空内存缓存。"""
-        clear_cached_history(uid)
+        _history_cache.clear(uid)
         return await ZhipuChatHistory.clear_history(uid)
 
     @classmethod
@@ -408,12 +394,12 @@ class ChatManager:
             - 若缓存中存在并且在 TTL 内，则直接返回缓存中的历史；
             - 否则从数据库加载最近若干条记录，写入缓存并返回。
         """
-        if cached_history := get_cached_history(uid):
+        if cached_history := _history_cache.get(uid):
             return [{"role": "system", "content": await get_prompt()}, *cached_history]
 
         # 缓存不存在或已过期，从数据库获取完整历史
         history = await ZhipuChatHistory.get_history(uid)
-        set_cached_history(uid, history)
+        _history_cache.set(uid, history)
         return [{"role": "system", "content": await get_prompt()}, *history]
 
     @classmethod
@@ -421,7 +407,7 @@ class ChatManager:
         gid = session.scene.id
 
         rows = (
-            await ChatHistory.filter(group_id=gid)
+            await ChatHistory.filter(group_id=gid, bot_id=session.self_id)
             .order_by("-create_time")
             .limit(20)
             .values("bot_id", "user_id", "group_id", "create_time", "text")
@@ -457,7 +443,7 @@ class ChatManager:
         parts = []
         for r in rows:
             uname = unique_keys[_key_from_row(r)]
-            parts.append(f"{r['create_time']} [{uname}]: {r['text']}")
+            parts.append(f"{r['create_time']} [{uname}]({r['user_id']}): {r['text']}")
         CHAT_RECORDS = "\n\n".join(parts)
 
         # .format(

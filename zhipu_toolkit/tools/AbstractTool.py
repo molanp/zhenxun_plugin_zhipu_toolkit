@@ -15,3 +15,13 @@ class AbstractTool(ABC):
     @abstractmethod
     async def func(self, session: Any, *args: Any, **kwargs: Any) -> str:
         """由工具类实现的调用逻辑"""
+
+    def to_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters,
+            },
+        }

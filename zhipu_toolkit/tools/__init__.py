@@ -27,7 +27,7 @@ class ToolsManager:
         if descriptor is None:
             raise ValueError(f"Tool '{name}' not found in the registry.")
 
-        func = descriptor.instance.func
+        func = descriptor.func
         sig = inspect.signature(func)
         parameters = sig.parameters
 
