@@ -23,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="3.6",
+        version="4.0",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -133,6 +133,20 @@ __plugin_meta__ = PluginMetadata(
                 type=int,
                 help="单次对话消息最大分割段数, 0表示无限分割, -1表示不分割",
                 default_value=3,
+            ),
+            RegisterConfig(
+                key="MAX_TOOL_CALLS_PER_TURN",
+                value=3,
+                type=int,
+                help="单次对话中允许的最大工具迭代次数，0表示禁用工具调用",
+                default_value=3,
+            ),
+            RegisterConfig(
+                key="DISABLE_TOOLS",
+                value=["likeTool"],
+                type=list,
+                help="禁止ai调用的工具列表",
+                default_value=["likeTool"],
             ),
         ],
     ).dict(),

@@ -1,7 +1,10 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
 from typing import Any
 
 
-class AbstractTool:
+class AbstractTool(ABC):
     name: str
     """工具名称"""
     parameters: dict[str, Any]
@@ -9,6 +12,6 @@ class AbstractTool:
     description: str
     """工具描述"""
 
+    @abstractmethod
     async def func(self, session: Any, *args: Any, **kwargs: Any) -> str:
         """由工具类实现的调用逻辑"""
-        raise NotImplementedError("工具函数必须实现")

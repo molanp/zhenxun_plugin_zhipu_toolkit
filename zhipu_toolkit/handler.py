@@ -1,7 +1,7 @@
 import asyncio
 import re
 
-from nonebot import on_message, require
+from nonebot import on_message
 from nonebot_plugin_apscheduler import scheduler
 from zai import ZhipuAiClient as ZhipuAI
 
@@ -9,11 +9,11 @@ from zhenxun.services.log import logger
 from zhenxun.utils.message import MessageUtils
 from zhenxun.utils.rules import ensure_group
 
+from .tools import ToolsManager
+
 from .model import ZhipuChatHistory
 from .utils import get_request_id, split_text
 
-require("nonebot_plugin_alconna")
-require("nonebot_plugin_uninfo")
 from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
 from nonebot_plugin_alconna import (
@@ -30,19 +30,26 @@ from nonebot_plugin_alconna import (
     UniMsg,
     on_alconna,
 )
+from nonebot.rule import to_me
 from nonebot_plugin_alconna.uniseg.tools import reply_fetch
 from nonebot_plugin_uninfo import ADMIN, Uninfo
+from nonebot import get_driver
 
-from .config import ChatConfig, get_prompt
+from .config import ChatConfig
 from .data_source import (
     ChatManager,
     ImpersonationStatus,
     check_video_task_status,
     hello,
 )
-from .rule import need_byd, need_reply
+from .rule import need_byd
 
 INIT = True
+
+
+@get_driver().on_startup
+async def init_tools():
+    await ToolsManager.init(ChatConfig.get("DISABLE_TOOLS"))
 
 
 @scheduler.scheduled_job(
@@ -89,7 +96,7 @@ byd_mode = on_alconna(
     block=True,
 )
 
-chat = on_message(priority=999, block=True, rule=need_reply)
+chat = on_message(priority=999, block=True, rule=to_me())
 
 byd_chat = on_message(priority=1000, block=True, rule=need_byd)
 
@@ -233,7 +240,6 @@ async def _(bot: Bot, msg: UniMsg, session: Uninfo, result: Arparma):
 
 @chat.handle()
 async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
-    use_reply = await need_reply(event)
     api_key = ChatConfig.get("API_KEY")
 
     plain_text = msg.extract_plain_text().strip()
@@ -249,8 +255,8 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
     # 内联引用图片提取逻辑
     image = ""
     reply = await reply_fetch(event, bot)
-    if isinstance(reply, Reply) and not isinstance(reply.msg, str):
-        generated = await UniMessage.generate(message=reply.msg, event=event, bot=bot)
+    if isinstance(reply, Reply) and not isinstance(reply.msg, str) and reply.msg:
+        generated = await UniMessage.of(reply.msg, bot=bot).attach_reply(event, bot)
         for item in generated:
             if isinstance(item, Image):
                 image = item
@@ -262,17 +268,14 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
         await UniMessage(Text(result)).finish(reply_to=True)
 
     for r, delay in await split_text(result):
-        await UniMessage(r).send(reply_to=use_reply)
+        await UniMessage(r).send(reply_to=True)
         await asyncio.sleep(delay)
 
 
 @byd_chat.handle()
 async def _(session: Uninfo):
-    if await ImpersonationStatus.check(session) and ChatConfig.get("API_KEY"):
-        return asyncio.create_task(ChatManager.call_impersonation_ai(session))
-
-    # 伪人模式未启用
-    logger.debug("伪人模式被禁用 skip...", "zhipu_toolkit", session=session)
+    if ChatConfig.get("API_KEY"):
+        await ChatManager.call_impersonation_ai(session)
 
 
 @clear_my_chat.handle()

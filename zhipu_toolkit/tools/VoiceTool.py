@@ -9,6 +9,7 @@ from zhenxun.utils.http_utils import AsyncHttpx
 from zhenxun.utils.rules import ensure_group
 
 from .AbstractTool import AbstractTool
+from .registry import register_tool
 
 
 def random_str():
@@ -17,10 +18,11 @@ def random_str():
     return "".join(random.choice(chars) for _ in range(11))
 
 
+@register_tool
 class VoiceTool(AbstractTool):
     name = "voiceTool"
     description = "这是一个实现你发送语音功能的工具，平常正常对话时、当你想发送语音时，调用此工具。"  # noqa: E501
-    parameters = {  # noqa: RUF012
+    parameters = {
         "type": "object",
         "properties": {
             "text": {
