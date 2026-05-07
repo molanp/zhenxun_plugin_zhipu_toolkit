@@ -238,10 +238,9 @@ class PromptCache:
             return False
 
         # mtime 变了或首次加载：走统一刷新逻辑
-        before = self._content
-        after = await self._refresh(force=True)
+        await self._refresh(force=True)
         # 只要刷新成功（内容可能相同也可能不同），mtime 已更新，此次认为“有刷新”
-        return after != before
+        return True
 
 
 PROMPT_CACHE = PromptCache()
@@ -264,11 +263,6 @@ class ChatConfig:
         key = key.upper()
         return Config.get_config("zhipu_toolkit", key)
 
-    @classmethod
-    def disable_tools(cls, tools: list[str]) -> None:
-        from .tools import ToolsManager
-
-        ToolsManager.registry.disable_tools(tools)
 
 
 class PluginConfig(BaseModel, extra=Extra.ignore):

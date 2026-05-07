@@ -1,4 +1,5 @@
 import asyncio
+import random
 import re
 
 from nonebot import on_message
@@ -42,7 +43,6 @@ from .data_source import (
     check_video_task_status,
     hello,
 )
-from .rule import need_byd
 
 INIT = True
 
@@ -67,6 +67,14 @@ async def delete_expired_chat_history():
         logger.info(f"成功清理 {deleted} 条过期会话 记录", "zhipu_toolkit")
     except Exception as e:
         logger.error("清理过期会话记录失败", "zhipu_toolkit", e=e)
+
+
+async def need_fake_person(session: Uninfo) -> bool:
+    return bool(
+        ensure_group(session)
+        and random.random() * 100 < ChatConfig.get("IMPERSONATION_TRIGGER_FREQUENCY")
+        and await ImpersonationStatus.check(session)
+    )
 
 
 draw_pic = on_alconna(
@@ -98,7 +106,7 @@ byd_mode = on_alconna(
 
 chat = on_message(priority=999, block=True, rule=to_me())
 
-byd_chat = on_message(priority=1000, block=True, rule=need_byd)
+fake_person_chat = on_message(priority=1000, block=True, rule=need_fake_person)
 
 clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
 
@@ -272,7 +280,7 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
         await asyncio.sleep(delay)
 
 
-@byd_chat.handle()
+@fake_person_chat.handle()
 async def _(session: Uninfo):
     if ChatConfig.get("API_KEY"):
         await ChatManager.call_impersonation_ai(session)

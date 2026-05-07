@@ -491,14 +491,6 @@ class ChatManager:
         client = ZhipuAI(api_key=ChatConfig.get("API_KEY"))
         request_id = get_request_id()
         tools = ToolsManager.get_tools() if use_tool else None
-        tool_map = (
-            [t.name for t in ToolsManager.registry.get_tools()] if tools else None
-        )
-        logger.info(
-            f"可调用工具: {tool_map}",
-            "zhipu_toolkit",
-            session=session,
-        )
         try:
             response = await loop.run_in_executor(
                 None,

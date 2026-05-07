@@ -15,11 +15,19 @@ from .AbstractTool import AbstractTool
 
 @dataclass
 class ToolDescriptor:
-    name: str
-    description: str
-    parameters: dict[str, Any]
-    tool_cls: type[AbstractTool]
     instance: AbstractTool
+
+    @property
+    def name(self) -> str:
+        return self.instance.name
+
+    @property
+    def description(self) -> str:
+        return self.instance.description
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return self.instance.parameters
 
     def to_schema(self) -> dict[str, Any]:
         return {
@@ -83,13 +91,7 @@ class ToolRegistry:
                 "zhipu_toolkit.tools",
             )
             return
-        cls._registry[instance.name] = ToolDescriptor(
-            name=instance.name,
-            description=instance.description,
-            parameters=instance.parameters,
-            tool_cls=tool_cls,
-            instance=instance,
-        )
+        cls._registry[instance.name] = ToolDescriptor(instance=instance)
 
     @classmethod
     def disable_tools(cls, tools: list[str]) -> None:
@@ -122,3 +124,5 @@ def register_tool(tool_cls: type[AbstractTool]) -> type[AbstractTool]:
     ToolRegistry.register(tool_cls)
     return tool_cls
 
+
+registry = ToolRegistry()

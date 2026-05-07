@@ -7,32 +7,29 @@ import ujson
 
 from zhenxun.services.log import logger
 
-from .registry import ToolRegistry
+from .registry import registry
 
 
 class ToolsManager:
-    registry: type[ToolRegistry] = ToolRegistry
     _lock = asyncio.Lock()
 
     @classmethod
-    async def init(cls, disable_tools: list[str] = []) -> None:
+    async def init(cls, disable_tools: list[str] | None = None) -> None:
         """Initialize the tools registry by loading all tool modules."""
+        disable_tools = disable_tools or [] 
         async with cls._lock:
-            await cls.registry.load_modules()
-            cls.registry.disable_tools(disable_tools)
+            await registry.load_modules()
+            registry.disable_tools(disable_tools)
 
-    @classmethod
-    def get_tools(cls) -> list[dict[str, Any]] | None:
+    @staticmethod
+    def get_tools() -> list[dict[str, Any]]:
         """Return the tools registry."""
-        if tools := cls.registry.get_tools():
-            return [tool.to_schema() for tool in tools]
-        else:
-            return
+        return [t.to_schema() for t in registry.get_tools()]
 
-    @classmethod
-    async def call_func(cls, session: Uninfo, name: str, args: Any) -> str:
+    @staticmethod
+    async def call_func(session: Uninfo, name: str, args: Any) -> str:
         """Call the function of the specified tool."""
-        descriptor = cls.registry.get_tool(name)
+        descriptor = registry.get_tool(name)
         if descriptor is None:
             raise ValueError(f"Tool '{name}' not found in the registry.")
 
@@ -66,11 +63,11 @@ class ToolsManager:
     async def reload_tools(cls) -> None:
         """Reload all tool modules."""
         async with cls._lock:
-            await cls.registry.reload()
+            await registry.reload()
 
     @classmethod
     async def reflash_tools(cls) -> None:
         """Reflash all tool modules list."""
         async with cls._lock:
-            cls.registry.clear()
-            await cls.registry.load_modules()
+            registry.clear()
+            await registry.load_modules()
