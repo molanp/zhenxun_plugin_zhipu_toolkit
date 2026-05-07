@@ -443,11 +443,11 @@ class ChatManager:
             parts.append(f"{r['create_time']} [{uname}]: {r['text']}")
         CHAT_RECORDS = "\n\n".join(parts)
 
-        prompt = IMPERSONATION_PROMPT.format(
-            date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            name=BotConfig.self_nickname,
-            uid=session.self_id,
-        )
+        prompt = IMPERSONATION_PROMPT  # .format(
+        #     date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        #     name=BotConfig.self_nickname,
+        #     uid=session.self_id,
+        # )
         result = await cls.get_zhipu_result(
             get_request_id(),
             ChatConfig.get("IMPERSONATION_MODEL"),
