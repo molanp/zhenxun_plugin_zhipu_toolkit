@@ -46,35 +46,44 @@ class ToolRegistry:
     _lock = asyncio.Lock()
 
     @classmethod
-    async def load_modules(cls) -> None:
+    async def load_modules(cls, disable_tools: list[str] | None = None) -> None:
         async with cls._lock:
-            if cls._registry:
-                return
+            await cls._load_modules(disable_tools)
 
-            tools_dir = Path(__file__).parent
-            if not tools_dir.exists():
-                logger.warning("工具目录不存在，无法加载工具。", "zhipu_toolkit.tools")
-                return
+    @classmethod
+    async def _load_modules(cls, disable_tools: list[str] | None = None) -> None:
+        disable_tools = disable_tools or []
+        cls._disabled_tools.update(disable_tools)
 
-            for module_info in pkgutil.iter_modules([tools_dir]):
-                module_name = module_info.name
-                if module_name in ("registry", "__init__", "AbstractTool"):
-                    continue  # 跳过非工具模块
-                try:
-                    module = importlib.import_module(
-                        f".{module_name}", package=__package__
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"加载工具模块 {module_name} 失败：{e}",
-                        "zhipu_toolkit.tools",
-                        e=e,
-                    )
-                    continue
+        if cls._registry:
+            if disable_tools:
+                cls.disable_tools(disable_tools)
+            return
 
-                for _, obj in inspect.getmembers(module, inspect.isclass):
-                    if issubclass(obj, AbstractTool) and obj is not AbstractTool:
-                        cls.register(obj)
+        tools_dir = Path(__file__).parent
+        if not tools_dir.exists():
+            logger.warning("工具目录不存在，无法加载工具。", "zhipu_toolkit.tools")
+            return
+
+        for module_info in pkgutil.iter_modules([tools_dir]):
+            module_name = module_info.name
+            if module_name in ("registry", "__init__", "AbstractTool"):
+                continue  # 跳过非工具模块
+            try:
+                module = importlib.import_module(
+                    f".{module_name}", package=__package__
+                )
+            except Exception as e:
+                logger.error(
+                    f"加载工具模块 {module_name} 失败：{e}",
+                    "zhipu_toolkit.tools",
+                    e=e,
+                )
+                continue
+
+            for _, obj in inspect.getmembers(module, inspect.isclass):
+                if issubclass(obj, AbstractTool) and obj is not AbstractTool:
+                    cls.register(obj)
 
     @classmethod
     def register(cls, tool_cls: type[AbstractTool]) -> None:
@@ -116,8 +125,9 @@ class ToolRegistry:
 
     @classmethod
     async def reload(cls) -> None:
-        cls.clear()
-        await cls.load_modules()
+        async with cls._lock:
+            cls.clear()
+            await cls._load_modules()
 
 
 def register_tool(tool_cls: type[AbstractTool]) -> type[AbstractTool]:

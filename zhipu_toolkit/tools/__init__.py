@@ -1,4 +1,3 @@
-import asyncio
 import inspect
 from typing import Any
 
@@ -11,15 +10,10 @@ from .registry import registry
 
 
 class ToolsManager:
-    _lock = asyncio.Lock()
-
     @classmethod
     async def init(cls, disable_tools: list[str] | None = None) -> None:
         """Initialize the tools registry by loading all tool modules."""
-        disable_tools = disable_tools or [] 
-        async with cls._lock:
-            await registry.load_modules()
-            registry.disable_tools(disable_tools)
+        await registry.load_modules(disable_tools)
 
     @staticmethod
     def get_tools() -> list[dict[str, Any]]:
@@ -62,12 +56,9 @@ class ToolsManager:
     @classmethod
     async def reload_tools(cls) -> None:
         """Reload all tool modules."""
-        async with cls._lock:
-            await registry.reload()
+        await registry.reload()
 
     @classmethod
     async def reflash_tools(cls) -> None:
         """Reflash all tool modules list."""
-        async with cls._lock:
-            registry.clear()
-            await registry.load_modules()
+        await registry.reload()

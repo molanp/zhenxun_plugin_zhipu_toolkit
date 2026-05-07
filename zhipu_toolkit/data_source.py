@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime
 import os
 from pathlib import Path
@@ -34,7 +34,7 @@ from .utils import (
 # ==== 简单的内存缓存，用于减少 normal_chat 频繁扫数据库 ====
 
 # 缓存有效期：多久没有访问就认为过期，自动丢弃
-CHAT_HISTORY_TTL_SECONDS = 30 * 60  # 30 分钟
+CHAT_HISTORY_TTL_SECONDS = 120 * 60  # 120 分钟
 # 每个 uid 最多保留多少条历史记录，防止内存无限增长
 CHAT_HISTORY_MAX_LEN = 200
 
@@ -43,10 +43,7 @@ CHAT_HISTORY_MAX_LEN = 200
 class HistoryCache:
     ttl_seconds: int
     max_len: int
-    _store: dict[str, dict[str, Any]] = {}  # noqa: RUF008
-
-    def __post_init__(self) -> None:
-        self._store = {}
+    _store: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def get(self, uid: str) -> list[dict] | None:
         now = datetime.datetime.now()
@@ -99,10 +96,30 @@ class HistoryCache:
 _history_cache = HistoryCache(CHAT_HISTORY_TTL_SECONDS, CHAT_HISTORY_MAX_LEN)
 
 
-@scheduler.scheduled_job("interval", minutes=20, id="zhipu_normal_chat_cache_prune")
-async def _prune_history_cache_job() -> None:
+def get_cached_history(uid: str) -> list[dict] | None:
+    return _history_cache.get(uid)
+
+
+def set_cached_history(uid: str, history: list[dict]) -> None:
+    _history_cache.set(uid, history)
+
+
+def append_cached_records(uid: str, records: list[dict]) -> None:
+    _history_cache.add_records(uid, records)
+
+
+def clear_cached_history(uid: str | None = None) -> None:
+    _history_cache.clear(uid)
+
+
+def prune_history_cache() -> int:
+    return _history_cache.prune()
+
+
+@scheduler.scheduled_job("interval", minutes=100, id="zhipu_normal_chat_cache_prune")
+async def prune_history_cache_job() -> None:
     """定时任务：周期性清理 normal_chat 的内存缓存."""
-    _history_cache.prune()
+    prune_history_cache()
 
 
 def hello() -> tuple[str, Path]:
@@ -262,7 +279,7 @@ class ChatManager:
             )
 
         # 2. 同步更新内存缓存
-        _history_cache.add_records(
+        append_cached_records(
             uid,
             [
                 {
@@ -380,7 +397,7 @@ class ChatManager:
     @classmethod
     async def clear_history(cls, uid: str | None = None) -> int:
         """清理历史记录，并同步清空内存缓存。"""
-        _history_cache.clear(uid)
+        clear_cached_history(uid)
         return await ZhipuChatHistory.clear_history(uid)
 
     @classmethod
@@ -391,12 +408,12 @@ class ChatManager:
             - 若缓存中存在并且在 TTL 内，则直接返回缓存中的历史；
             - 否则从数据库加载最近若干条记录，写入缓存并返回。
         """
-        if cached_history := _history_cache.get(uid):
+        if cached_history := get_cached_history(uid):
             return [{"role": "system", "content": await get_prompt()}, *cached_history]
 
         # 缓存不存在或已过期，从数据库获取完整历史
         history = await ZhipuChatHistory.get_history(uid)
-        _history_cache.set(uid, history)
+        set_cached_history(uid, history)
         return [{"role": "system", "content": await get_prompt()}, *history]
 
     @classmethod
@@ -443,23 +460,24 @@ class ChatManager:
             parts.append(f"{r['create_time']} [{uname}]: {r['text']}")
         CHAT_RECORDS = "\n\n".join(parts)
 
-        prompt = IMPERSONATION_PROMPT  # .format(
+        # .format(
         #     date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         #     name=BotConfig.self_nickname,
         #     uid=session.self_id,
         # )
         result = await cls.get_zhipu_result(
-            get_request_id(),
-            ChatConfig.get("IMPERSONATION_MODEL"),
-            [
+            uid=get_request_id(),
+            model=ChatConfig.get("IMPERSONATION_MODEL"),
+            messages=[
                 {
                     "role": "system",
-                    "content": prompt,
+                    "content": IMPERSONATION_PROMPT,
                 },
                 {"role": "user", "content": CHAT_RECORDS},
             ],
-            session,
-            True,
+            session=session,
+            impersonation=True,
+            use_tool=False,
         )
         if result.error_code == 1:
             logger.warning("伪人触发内容审查", "zhipu_toolkit", session=session)
