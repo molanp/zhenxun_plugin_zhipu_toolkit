@@ -10,7 +10,7 @@ class QQZoneTool(AbstractTool):
         "确提出删除qq空间说说时你可以调用该工具删除说说，但是用户主动提出发送说说"
         "时你不能调用(发送说说只能你自己觉得可以调用时再主动调用)"
     )
-    parameters = {  # noqa: RUF012
+    parameters = {
         "type": "object",
         "properties": {
             "text": {

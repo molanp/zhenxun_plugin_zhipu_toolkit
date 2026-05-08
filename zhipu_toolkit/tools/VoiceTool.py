@@ -20,7 +20,7 @@ def random_str():
 class VoiceTool(AbstractTool):
     name = "voiceTool"
     description = "这是一个实现你发送语音功能的工具，平常正常对话时、当你想发送语音时，调用此工具。"  # noqa: E501
-    parameters = {  # noqa: RUF012
+    parameters = {
         "type": "object",
         "properties": {
             "text": {

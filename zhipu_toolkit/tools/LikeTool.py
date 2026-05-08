@@ -6,7 +6,7 @@ from .AbstractTool import AbstractTool
 class LikeTool(AbstractTool):
     name = "likeTool"
     description = "用户请求点赞相关的操作，包括给他人点赞或请求他人给自己点赞"
-    parameters = {  # noqa: RUF012
+    parameters = {
         "type": "object",
         "properties": {
             "uid": {

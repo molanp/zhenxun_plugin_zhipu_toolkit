@@ -13,7 +13,7 @@ class BanTool(AbstractTool):
         "拉黑指定用户或对话者，支持自定义拉黑时长（分钟）或随机1-100分钟，"
         "返回操作结果（成功/失败原因）。"
     )
-    parameters = {  # noqa: RUF012
+    parameters = {
         "type": "object",
         "properties": {
             "uid": {
