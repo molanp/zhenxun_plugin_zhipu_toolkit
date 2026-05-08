@@ -1,9 +1,7 @@
 from ..utils.QQApi import QQApi
 from .AbstractTool import AbstractTool
-from .registry import register_tool
 
 
-@register_tool
 class QQZoneTool(AbstractTool):
     name = "qqZoneTool"
     description = (

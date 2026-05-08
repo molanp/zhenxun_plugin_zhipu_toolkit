@@ -7,10 +7,8 @@ from zhenxun.utils.platform import PlatformUtils
 from zhenxun.utils.rules import ensure_group
 
 from .AbstractTool import AbstractTool
-from .registry import register_tool
 
 
-@register_tool
 class MuteTool(AbstractTool):
     """禁言用户的工具（支持随机时长）"""
 
@@ -56,7 +54,6 @@ class MuteTool(AbstractTool):
             return f"失败了，我在这个群聊 {gid} 没有权限禁言别人"
 
 
-@register_tool
 class UnMuteTool(AbstractTool):
     """取消用户禁言的工具"""
 

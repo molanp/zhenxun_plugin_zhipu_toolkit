@@ -6,7 +6,11 @@ import ujson
 
 from zhenxun.services.log import logger
 
-from .registry import registry
+
+from .AbstractTool import registry
+
+
+
 
 
 class ToolsManager:

@@ -3,10 +3,8 @@ import random
 from zhenxun.models.ban_console import BanConsole
 
 from .AbstractTool import AbstractTool
-from .registry import register_tool
 
 
-@register_tool
 class BanTool(AbstractTool):
     """拉黑用户的工具（支持随机时长）"""
 
@@ -53,7 +51,6 @@ class BanTool(AbstractTool):
             return f"拉黑用户失败, 原因: {e!s}"
 
 
-@register_tool
 class UnBanTool(AbstractTool):
     """取消拉黑用户的工具"""
 

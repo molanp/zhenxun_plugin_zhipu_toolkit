@@ -1,10 +1,8 @@
 from nonebot import get_bot
 
 from .AbstractTool import AbstractTool
-from .registry import register_tool
 
 
-@register_tool
 class LikeTool(AbstractTool):
     name = "likeTool"
     description = "用户请求点赞相关的操作，包括给他人点赞或请求他人给自己点赞"
