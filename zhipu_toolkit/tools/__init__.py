@@ -25,7 +25,7 @@ class ToolsManager:
         """Call the function of the specified tool."""
         descriptor = registry.get_tool(name)
         if descriptor is None:
-            raise ValueError(f"Tool '{name}' not found in the registry.")
+            return "Tool is not found in the registry."
 
         func = descriptor.func
         sig = inspect.signature(func)
@@ -35,11 +35,11 @@ class ToolsManager:
             try:
                 kwargs = ujson.loads(args)
             except Exception as e:
-                raise ValueError(f"Invalid arguments format: {e}") from e
+                return f"Invalid arguments format: {e}"
         elif isinstance(args, dict):
             kwargs = args
         else:
-            raise ValueError("Tool arguments must be a JSON string or a dict.")
+            return "Tool arguments must be a JSON string or a dict."
 
         if "session" in parameters:
             kwargs["session"] = session
@@ -48,10 +48,10 @@ class ToolsManager:
             return await func(**kwargs)
         except TypeError as e:
             logger.error("参数类型错误", "zhipu_toolkit.tools", e=e)
-            return "调用工具失败: 参数数量不符"
+            return "参数数量不符"
         except Exception as e:
             logger.error(f"调用工具 {name} 失败", "zhipu_toolkit.tools", e=e)
-            return f"调用工具失败: {type(e)},{e}"
+            return f"{type(e)},{e}"
 
     @classmethod
     async def reload_tools(cls) -> None:

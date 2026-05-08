@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import asyncio
 import importlib
 import inspect
-from pathlib import Path
 import pkgutil
 from typing import ClassVar
 
@@ -27,17 +24,13 @@ class ToolRegistry:
 
     @classmethod
     async def _load_all_modules(cls) -> None:
-        tools_dir = Path(__file__).parent
-        if not tools_dir.exists():
-            logger.warning("工具目录不存在，无法加载工具。", "zhipu_toolkit.tools")
+        if not __path__:  # noqa: F821
+            logger.warning("Module path is empty.")
             return
-
-        for module_info in pkgutil.iter_modules([tools_dir]):
+        for module_info in pkgutil.iter_modules(__path__):  # noqa: F821
             module_name = module_info.name
-            if module_name in ("registry", "__init__", "AbstractTool"):
-                continue  # 跳过非工具模块
             try:
-                module = importlib.import_module(f".{module_name}", package=__package__)
+                module = importlib.import_module(f".{module_name}", package=__name__)
             except Exception as e:
                 logger.error(
                     f"加载工具模块 {module_name} 失败：{e}",

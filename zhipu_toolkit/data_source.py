@@ -187,7 +187,7 @@ class ChatManager:
             "tool_calls": None,
             "tool_call_id": tool_id,
         }
-
+    @classmethod
     @classmethod
     async def _resolve_tool_chain(
         cls,
@@ -211,23 +211,27 @@ class ChatManager:
         ):
             tool_calls = result.message.tool_calls
             for tool_call in tool_calls:
+                # 如果已经达到上限，在当前 tool_call 上补一条“已达上限”的 tool 结果并终止链路
                 if used_tool_calls >= max_tool_calls:
-                    break
-                tool_result = await cls.parse_function_call(uid, session, tool_call)
-                if tool_result is None:
-                    return ZhipuResult(
-                        content=f"调用工具失败: {tool_call.function.name}",
-                        error_code=2,
+                    logger.warning(
+                        f"达到单次对话最大工具调用次数 {max_tool_calls}，后续工具调用将被忽略",
+                        "zhipu_toolkit",
+                        session=session,
                     )
+                    round_records.append(
+                        cls._build_tool_record(
+                            "本次对话工具调用次数已达上限", tool_call.id
+                        )
+                    )
+                    return result
+
+                tool_result = await cls.parse_function_call(session, tool_call)
                 round_records.append(cls._build_tool_record(tool_result, tool_call.id))
                 used_tool_calls += 1
 
-            if used_tool_calls >= max_tool_calls and result.message.tool_calls:
-                logger.warning(
-                    f"达到单次对话最大工具调用次数 {max_tool_calls}，后续工具调用将被忽略",
-                    "zhipu_toolkit",
-                    session=session,
-                )
+            # 当前这轮 tool_calls 处理完后，如果已经达到上限，则不再让模型继续发起新的工具调用
+            if used_tool_calls >= max_tool_calls:
+                break
 
             result = await cls.get_zhipu_result(
                 uid,
@@ -504,6 +508,7 @@ class ChatManager:
                     user_id=uid,
                     request_id=request_id,
                     tools=tools,
+                    thinking={"type": "disabled"},
                 ),
             )
         except Exception as e:
@@ -547,32 +552,18 @@ class ChatManager:
 
     @classmethod
     async def parse_function_call(
-        cls,
-        uid: str,
-        session: Uninfo,
-        tool_call: CompletionMessageToolCall | list[CompletionMessageToolCall] | None,
+        cls, session: Uninfo, tool_call: CompletionMessageToolCall
     ):
         if not tool_call:
             return None
-        if isinstance(tool_call, list):
-            tool_call = tool_call[0]
 
         args = tool_call.function.arguments
-        try:
-            logger.info(
-                f"调用函数 {tool_call.function.name}",
-                "zhipu_toolkit",
-                session=session,
-            )
-            return await ToolsManager.call_func(session, tool_call.function.name, args)
-        except Exception as e:
-            logger.error(
-                f"UID {uid} 工具调用失败",
-                "zhipu_toolkit",
-                session=session,
-                e=e,
-            )
-            return None
+        logger.info(
+            f"调用工具 {tool_call.function.name}",
+            "zhipu_toolkit",
+            session=session,
+        )
+        return await ToolsManager.call_func(session, tool_call.function.name, args)
 
 
 class ImpersonationStatus:
