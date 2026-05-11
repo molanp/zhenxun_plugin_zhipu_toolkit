@@ -187,6 +187,7 @@ async def get_custom_face(bot: Bot):
             FACE_CACHE_LIST = ((await bot.fetch_custom_face())["data"], time.time())
         except Exception as e:
             logger.error("获取QQ收藏表情失败", "zhipu_toolkit:get_custom_face", e=e)
+            FACE_CACHE_LIST = (FACE_CACHE_LIST[0], time.time())
             return ""
     if fcl := FACE_CACHE_LIST[0]:
         return random.choice(fcl)
