@@ -1,7 +1,9 @@
 import asyncio
 import base64
 import datetime
+import random
 import re
+import time
 import uuid
 
 from nonebot import get_bot, require
@@ -17,6 +19,10 @@ from zai import ZhipuAiClient as ZhipuAI
 from zhenxun.utils.platform import PlatformUtils
 
 from ..config import ChatConfig
+from nonebot.adapters.onebot.v11 import Bot
+from zhenxun.services.log import logger
+
+FACE_CACHE_LIST: tuple[list[str], float] = ([], 0.0)
 
 
 def get_request_id() -> str:
@@ -49,31 +55,6 @@ async def msg2str(
         else:
             message += str(segment).replace("[reply]", "\n")
     return message, res
-
-
-# def str2msg(message: str) -> list[Text]:
-#     """
-#     将字符串消息转换为消息段列表。
-
-#     该函数解析输入的字符串消息，将其中的 `@` 转换为对应的消息段，并将文本分割成每句话
-
-#     :param message: 输入的字符串消息。
-#     :return: 包含消息段的列表，每个消息段为 MessageSegment 实例。
-#     """
-#     segments = []
-#     at_pattern = r"@UID ([^ ]+)|@\[uid=([^>]+)\]"
-#     last_pos = 0
-
-#     for match in re.finditer(at_pattern, message, re.DOTALL):
-#         if match.start() > last_pos:
-#             segments.append(Text(message[last_pos : match.start()]))
-#         uid = match.group(1) or match.group(2)
-#         segments.append(At("user", uid))
-#         last_pos = match.end()
-#     if last_pos < len(message):
-#         segments.append(Text(message[last_pos:]))
-
-#     return segments
 
 
 def get_username_by_session(session: Session) -> str:
@@ -197,3 +178,25 @@ async def get_username(bot_id: str, uid: str, group_id: str | None = None) -> st
         return "未知用户"
     name = info.card or info.name
     return re.sub(r"[\x00-\x09\x0b-\x1f\x7f-\x9f]", "", name)
+
+
+async def get_custom_face(bot: Bot):
+    global FACE_CACHE_LIST
+    if (time.time() - FACE_CACHE_LIST[1]) > 7200:
+        try:
+            data = (await bot.fetch_custom_face())["data"]
+            FACE_CACHE_LIST = (data, time.time())
+        except Exception as e:
+            logger.error("获取QQ收藏表情失败", "zhipu_toolkit:get_custom_face", e=e)
+            return ""
+        return random.choice(data)
+    return ""
+
+
+async def send_face(bot: Bot) -> UniMessage | None:
+    if isinstance(bot, Bot):
+        if fre := ChatConfig.get("FACE_SEND_FREQUENCY"):
+            if random.random() * 100 < fre:
+                if face := await get_custom_face(bot):
+                    return UniMessage.image(url=face)
+    return None
