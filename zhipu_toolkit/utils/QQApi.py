@@ -1,3 +1,4 @@
+import http.cookies
 from typing import Any
 
 from nonebot import get_bot
@@ -19,15 +20,15 @@ class QQApi:
             "qname-space": "Production",
         }
 
-    async def getToken(self) -> dict[str, Any] | None:
+    async def getCookies(self) -> str:
         """
-        获取 QQ 空间相关的凭证信息（token, cookies 等）
+        获取 QQ 空间相关的Cookies
         """
         try:
-            return await self.bot.get_credentials(domain="qzone.qq.com")
+            return (await self.bot.get_credentials(domain="qzone.qq.com"))["cookies"]
         except Exception as e:
             logger.error("获取 QQ 登录凭证失败", "zhipu_toolkit.utils.QQApi", e=e)
-            return None
+            raise RuntimeError("获取 QQ 登录凭证失败") from e
 
     async def getQzone(self, num: int = 20, pos: int = 0) -> dict[str, Any]:
         """
@@ -38,14 +39,12 @@ class QQApi:
         :return: QQ 空间数据
         """
         url = "https://user.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msglist_v6"
-        token_info = await self.getToken()
-        if token_info is None:
-            raise RuntimeError("获取 token 失败")
+        ck = await self.getCookies()
 
         resp = await AsyncHttpx.get(
             url,
             headers={
-                "Cookie": token_info["cookies"],
+                "Cookie": ck,
                 **self.headers,
             },
             params={
@@ -55,7 +54,7 @@ class QQApi:
                 "pos": pos,
                 "num": num,
                 "replynum": 100,
-                "g_tk": token_info["csrf_token"],
+                "g_tk": self.get_gtk(ck),
                 "code_version": 1,
                 "format": "json",
                 "need_private_comment": 1,
@@ -71,18 +70,16 @@ class QQApi:
         :param t1_source: t1_source 参数
         """
         url = "https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_delete_v6"
-        token_info = await self.getToken()
-        if token_info is None:
-            raise RuntimeError("获取 token 失败")
+        ck = await self.getCookies()
         resp = await AsyncHttpx.post(
             url,
             headers={
-                "Cookie": token_info["cookies"],
+                "Cookie": ck,
                 "Content-Type": "application/x-www-form-urlencoded",
                 **self.headers,
             },
             params={
-                "g_tk": token_info["csrf_token"],
+                "g_tk": self.get_gtk(ck),
             },
             data={
                 "hostuin": self.bot.self_id,
@@ -102,9 +99,7 @@ class QQApi:
         :param img: 图片（如果有）
         """
         url = "https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6"
-        token_info = await self.getToken()
-        if token_info is None:
-            raise RuntimeError("获取 token 失败")
+        ck = await self.getCookies()
         data = {
             "syn_tweet_verson": 1,
             "paramstr": 1,
@@ -121,12 +116,12 @@ class QQApi:
         resp = await AsyncHttpx.post(
             url,
             headers={
-                "Cookie": token_info["cookies"],
+                "Cookie": ck,
                 "Content-Type": "application/x-www-form-urlencoded",
                 **self.headers,
             },
             params={
-                "g_tk": token_info["csrf_token"],
+                "g_tk": self.get_gtk(ck),
             },
             data=data,
         )
@@ -142,9 +137,7 @@ class QQApi:
         url = (
             "https://user.qzone.qq.com/proxy/domain/m.qzone.qq.com/cgi-bin/new/get_msgb"
         )
-        token_info = await self.getToken()
-        if token_info is None:
-            raise RuntimeError("获取 token 失败")
+        ck = await self.getCookies()
         resp = await AsyncHttpx.get(
             url,
             params={
@@ -156,10 +149,10 @@ class QQApi:
                 "num": num,
                 "inCharset": "utf-8",
                 "outCharset": "utf-8",
-                "g_tk": token_info["csrf_token"],
+                "g_tk": self.get_gtk(ck),
             },
             headers={
-                "Cookie": token_info["cookies"],
+                "Cookie": ck,
                 **self.headers,
             },
         )
@@ -173,18 +166,16 @@ class QQApi:
         :param uin_id: uinId
         """
         url = "https://h5.qzone.qq.com/proxy/domain/m.qzone.qq.com/cgi-bin/new/del_msgb"
-        token_info = await self.getToken()
-        if token_info is None:
-            raise RuntimeError("获取 token 失败")
+        ck = await self.getCookies()
         resp = await AsyncHttpx.post(
             url,
             headers={
-                "Cookie": token_info["cookies"],
+                "Cookie": ck,
                 "Content-Type": "application/x-www-form-urlencoded",
                 **self.headers,
             },
             params={
-                "g_tk": token_info["csrf_token"],
+                "g_tk": self.get_gtk(ck),
             },
             data={
                 "hostUin": self.bot.self_id,
@@ -195,8 +186,22 @@ class QQApi:
                 "inCharset": "utf-8",
                 "outCharset": "utf-8",
                 "ref": "qzone",
-                "g_tk": token_info["csrf_token"],
+                "g_tk": self.get_gtk(ck),
                 "json": 1,
             },
         )
         return resp.json()
+
+    def get_gtk(self, ck: str) -> int:
+        cookies = http.cookies.SimpleCookie()
+        cookies.load(ck)
+
+        skey = cookies.get("skey")
+        if skey is None or not skey.value:
+            raise ValueError("Cookie 中缺少 'skey' 字段，无法计算 g_tk")
+
+        e = skey
+        n = 5381
+        for ch in e:
+            n += (n << 5) + ord(ch)
+        return 2147483647 & n
