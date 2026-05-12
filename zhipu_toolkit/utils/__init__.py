@@ -21,6 +21,7 @@ from zhenxun.utils.platform import PlatformUtils
 from ..config import ChatConfig
 from nonebot.adapters.onebot.v11 import Bot
 from zhenxun.services.log import logger
+from nonebot.exception import ActionFailed
 
 FACE_CACHE_LIST: tuple[list[str], float] = ([], 0.0)
 
@@ -185,7 +186,7 @@ async def get_custom_face(bot: Bot):
     if (time.time() - FACE_CACHE_LIST[1]) > 7200:
         try:
             FACE_CACHE_LIST = (await bot.fetch_custom_face(), time.time())
-        except Exception as e:
+        except ActionFailed as e:
             logger.error("获取QQ收藏表情失败", "zhipu_toolkit:get_custom_face", e=e)
             FACE_CACHE_LIST = (FACE_CACHE_LIST[0], time.time())
             return ""
