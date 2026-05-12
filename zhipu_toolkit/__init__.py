@@ -96,7 +96,7 @@ __plugin_meta__ = PluginMetadata(
                 key="IMPERSONATION_TRIGGER_FREQUENCY",
                 value=20,
                 type=float,
-                help="伪人模式触发频率[0-100]",
+                help="伪人模式触发频率[0-100](百分比)",
                 default_value=20,
             ),
             RegisterConfig(
@@ -148,6 +148,13 @@ __plugin_meta__ = PluginMetadata(
                 help="禁止ai调用的工具列表",
                 default_value=["likeTool"],
             ),
+            RegisterConfig(
+                key="FACE_SEND_FREQUENCY",
+                value=20,
+                type=float,
+                help="触发对话后，发送表情包的概率(百分比)",
+                default_value=20,
+            )
         ],
     ).dict(),
 )

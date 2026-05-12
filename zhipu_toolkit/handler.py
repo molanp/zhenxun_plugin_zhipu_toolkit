@@ -13,7 +13,7 @@ from zhenxun.utils.rules import ensure_group
 from .tools import ToolsManager
 
 from .model import ZhipuChatHistory
-from .utils import get_request_id, split_text
+from .utils import get_request_id, send_face, split_text
 
 from nonebot.adapters import Bot, Event
 from nonebot.permission import SUPERUSER
@@ -278,6 +278,8 @@ async def _(bot, event: Event, msg: UniMsg, session: Uninfo):
     for r, delay in await split_text(result):
         await UniMessage(r).send(reply_to=True)
         await asyncio.sleep(delay)
+    if face := await send_face(bot):
+        await face.send()
 
 
 @fake_person_chat.handle()
