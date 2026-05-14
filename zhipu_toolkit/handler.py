@@ -46,6 +46,14 @@ from .data_source import (
 
 INIT = True
 
+BLOCK_RANGES = [
+    (3328144510, 3328144510),
+    (66600000, 66600000),
+    (2854196301, 2854216399),
+    (3889000000, 3889999999),
+    (4010000000, 4019999999),
+]
+
 
 async def block_qbot(session: Uninfo) -> bool:
     """过滤常见 QQ 机器人账号，返回 False 表示应被拦截。"""
@@ -54,19 +62,7 @@ async def block_qbot(session: Uninfo) -> bool:
         return True
 
     qq = int(uid)
-    blocked_single_ids = {
-        3328144510,
-        66600000,
-    }
-    if qq in blocked_single_ids:
-        return False
-
-    blocked_ranges = [
-        (2854196301, 2854216399),
-        (3889000000, 3889999999),
-        (4010000000, 4019999999),
-    ]
-    return not any(start <= qq <= end for start, end in blocked_ranges)
+    return not any(start <= qq <= end for start, end in BLOCK_RANGES)
 
 
 @get_driver().on_startup
