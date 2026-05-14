@@ -200,7 +200,7 @@ class QQApi:
         if skey is None or not skey.value:
             raise ValueError("Cookie 中缺少 'skey' 字段，无法计算 g_tk")
 
-        e = skey
+        e = skey.value
         n = 5381
         for ch in e:
             n += (n << 5) + ord(ch)
