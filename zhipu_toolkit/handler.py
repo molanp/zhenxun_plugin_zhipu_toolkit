@@ -31,7 +31,7 @@ from nonebot_plugin_alconna import (
     UniMsg,
     on_alconna,
 )
-from nonebot.rule import to_me
+from nonebot.rule import to_me, Rule
 from nonebot_plugin_alconna.uniseg.tools import reply_fetch
 from nonebot_plugin_uninfo import ADMIN, Uninfo
 from nonebot import get_driver
@@ -45,6 +45,28 @@ from .data_source import (
 )
 
 INIT = True
+
+
+async def block_qbot(session: Uninfo) -> bool:
+    """过滤常见 QQ 机器人账号，返回 False 表示应被拦截。"""
+    uid = session.user.id
+    if not uid.isdigit():
+        return True
+
+    qq = int(uid)
+    blocked_single_ids = {
+        3328144510,
+        66600000,
+    }
+    if qq in blocked_single_ids:
+        return False
+
+    blocked_ranges = [
+        (2854196301, 2854216399),
+        (3889000000, 3889999999),
+        (4010000000, 4019999999),
+    ]
+    return not any(start <= qq <= end for start, end in blocked_ranges)
 
 
 @get_driver().on_startup
@@ -85,6 +107,7 @@ draw_pic = on_alconna(
     ),
     priority=5,
     block=True,
+    rule=Rule(block_qbot),
 )
 
 draw_video = on_alconna(
@@ -95,6 +118,7 @@ draw_video = on_alconna(
     ),
     priority=5,
     block=True,
+    rule=Rule(block_qbot),
 )
 
 byd_mode = on_alconna(
@@ -102,24 +126,35 @@ byd_mode = on_alconna(
     priority=5,
     permission=ADMIN() | SUPERUSER,
     block=True,
+    rule=Rule(block_qbot),
 )
 
-chat = on_message(priority=999, block=True, rule=to_me())
+chat = on_message(
+    priority=999,
+    block=True,
+    rule=to_me() & Rule(block_qbot),
+)
 
 fake_person_chat = on_message(priority=1000, block=True, rule=need_fake_person)
 
-clear_my_chat = on_alconna(Alconna("清理我的会话"), priority=5, block=True)
+clear_my_chat = on_alconna(
+    Alconna("清理我的会话"),
+    priority=5,
+    block=True,
+    rule=Rule(block_qbot),
+)
 
 clear_all_chat = on_alconna(
     Alconna("清理全部会话"),
     permission=SUPERUSER,
     priority=5,
     block=True,
+    rule=Rule(block_qbot),
 )
 
 clear_group_chat = on_alconna(
     Alconna("清理群会话"),
-    rule=ensure_group,
+    rule=ensure_group & Rule(block_qbot),
     permission=ADMIN() | SUPERUSER,
     priority=5,
     block=True,
@@ -134,6 +169,7 @@ clear_chat = on_alconna(
     permission=SUPERUSER,
     priority=5,
     block=True,
+    rule=Rule(block_qbot),
 )
 
 show_chat = on_alconna(
@@ -145,6 +181,7 @@ show_chat = on_alconna(
     permission=ADMIN() | SUPERUSER,
     priority=5,
     block=True,
+    rule=Rule(block_qbot),
 )
 
 
