@@ -18,7 +18,7 @@ from zai import ZhipuAiClient as ZhipuAI
 
 from zhenxun.utils.platform import PlatformUtils
 
-from ..config import ChatConfig
+from ..config import ChatConfig, get_prompt
 from nonebot.adapters.onebot.v11 import Bot
 from zhenxun.services.log import logger
 from nonebot.exception import ActionFailed
@@ -202,3 +202,70 @@ async def send_face(bot: Bot) -> UniMessage | None:
                 if face := await get_custom_face(bot):
                     return UniMessage.image(url=face)
     return None
+
+
+async def is_harmful_output(user_input: str, bot_output: str) -> bool:
+    """
+    Anti-hacking function to filter out harmful outputs from the model.
+
+    :param user_input: 用户输入的原始文本
+    :param bot_output: 大模型生成的原始回复
+    :return: 经过安全过滤后的最终文本
+    """
+    # 统一转换小写以防绕过
+    user_input_lower = user_input.lower()
+    bot_output_clean = bot_output.strip()
+
+    # 核心安全硬标签
+    SECURITY_TOKEN = "BOT_SEC_LAYER"
+
+    # ====================================================
+    # 1. 第一层：纯文本硬标签匹配（秒杀直球复制）
+    # ====================================================
+    if SECURITY_TOKEN in bot_output:
+        logger.warning(
+            f"[Guardrail] 拦截成功：输出中包含安全硬标签 '{SECURITY_TOKEN}'",
+            "zhipu_toolkit:verify_and_filter_output",
+        )
+        return True
+
+    # ====================================================
+    # 2. 第二层：动态首尾特征锚定
+    # ====================================================
+    clean_prompt = (await get_prompt()).strip()
+    prompt_head = clean_prompt[:15]
+    prompt_tail = clean_prompt[-15:]
+
+    if (prompt_head in bot_output_clean) or (prompt_tail in bot_output_clean):
+        logger.warning(
+            "[Guardrail] 拦截成功：检测到输出中包含系统人设的原生开头或结尾片段",
+            "zhipu_toolkit:verify_and_filter_output",
+        )
+        return True
+
+    # ====================================================
+    # 3. 第三层：双向语义联动硬审计（防范换汤不换药地洗稿/总结人设）
+    # ====================================================
+    # 紧凑的恶意引导/催眠词特征正则（中英文覆盖）
+    attack_pattern = r"(system\s*prompt|original\s*system|ignore\s*all|系统提示词|忽略所有|原样输出|开发者模式)"
+
+    if re.search(attack_pattern, user_input_lower) and len(bot_output_clean) > 80:
+        common_chars = set(bot_output_clean) & set(clean_prompt)
+        # 过滤掉高频无意义的干扰字与标点
+        meaningful_overlap = [
+            c
+            for c in common_chars
+            if c not in "，。！？；：“”‘’（）【】的了是我你在他她它也吗吧呢有"
+        ]
+
+        # 如果扣除常用字后，重合的核心字符依然超过12个，说明大模型在换着句式背诵或翻译人设
+        if len(meaningful_overlap) > 12:
+            logger.warning(
+                "[Guardrail] 拦截成功：用户有套话意图，且模型回复与核心人设高度重合。"
+            )
+            return True
+
+    # ====================================================
+    # 4. 放行：安全通过审查
+    # ====================================================
+    return False
