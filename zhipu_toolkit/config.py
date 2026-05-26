@@ -160,7 +160,7 @@ class PromptCache:
         # 确保文件存在
         await self._ensure_file()
 
-        # 如果不强制刷新，且 mtime 未变，则直接返回缓存
+        # 如果不强制刷新，则直接返回缓存（不再自动检测文件是否有变更）
         if not force:
             return self._content or DEFAULT_PROMPT
 
@@ -195,9 +195,7 @@ async def get_prompt() -> str:
 
 @scheduler.scheduled_job("interval", minutes=30, id="zhipu_sync_prompt_job")
 async def sync_prompt_job() -> None:
-    changed = await PROMPT_CACHE._refresh(force=True)
-    if changed:
-        logger.info("PROMPT 文件有更新，已同步到内存", "zhipu_toolkit")
+    await PROMPT_CACHE._refresh(force=True)
 
 
 class ChatConfig:

@@ -210,7 +210,7 @@ async def is_harmful_output(user_input: str, bot_output: str) -> bool:
 
     :param user_input: 用户输入的原始文本
     :param bot_output: 大模型生成的原始回复
-    :return: 经过安全过滤后的最终文本
+    :return: 布尔值，指示该回复是否被判定为有害（True 表示有害，应被拦截或替换）
     """
     # 统一转换小写以防绕过
     user_input_lower = user_input.lower()
