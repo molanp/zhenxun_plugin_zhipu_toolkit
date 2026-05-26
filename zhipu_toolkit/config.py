@@ -132,7 +132,6 @@ IMPERSONATION_PROMPT = """
 class PromptCache:
     def __init__(self) -> None:
         self._content: str = ""
-        self._mtime: float | None = None
 
     async def _ensure_file(self) -> None:
         """确保 PROMPT 文件存在，不修改缓存状态。"""
@@ -142,12 +141,11 @@ class PromptCache:
         async with aiofiles.open(PROMPT_FILE, "w", encoding="utf-8") as f:
             await f.write(DEFAULT_PROMPT)
 
-    async def _read_file(self) -> tuple[str, float]:
+    async def _read_file(self) -> str:
         """真正做文件 I/O 的地方：只返回内容和 mtime，不碰缓存。"""
-        mtime = PROMPT_FILE.stat().st_mtime
         async with aiofiles.open(PROMPT_FILE, encoding="utf-8") as f:
             content = await f.read()
-        return content, mtime
+        return content
 
     async def _refresh(self, force: bool = False) -> str:
         """统一的刷新逻辑：决定是否读文件，并更新缓存与 mtime。
@@ -162,26 +160,14 @@ class PromptCache:
         # 确保文件存在
         await self._ensure_file()
 
-        try:
-            current_mtime = PROMPT_FILE.stat().st_mtime
-        except Exception as e:
-            logger.error(
-                "PROMPT 获取 mtime 失败，使用现有 PROMPT 或 DEFAULT_PROMPT",
-                "zhipu_toolkit",
-                e=e,
-            )
-            # 失败时不动缓存
-            return self._content or DEFAULT_PROMPT
-
-        # 如果不强制刷新，且 mtime 未变，则直接返回缓存
-        if not force and self._mtime is not None and current_mtime == self._mtime:
+        # 如果不强制刷新，则直接返回缓存（不再自动检测文件是否有变更）
+        if not force:
             return self._content or DEFAULT_PROMPT
 
         # 需要从文件读取，并用读到的结果更新缓存和 mtime
         try:
-            content, mtime = await self._read_file()
+            content = await self._read_file()
             self._content = content
-            self._mtime = mtime
             return self._content
         except Exception as e:
             logger.error(
@@ -197,38 +183,7 @@ class PromptCache:
     async def get(self) -> str:
         """对外获取 PROMPT 的入口，带懒加载与容错。"""
         # 若还未加载过内容，则强制刷新一次
-        if not self._content or self._mtime is None:
-            return await self._refresh(force=True)
-        # 否则直接返回缓存（定时任务会负责检测和刷新）
-        return self._content
-
-    async def refresh_if_changed(self) -> bool:
-        """给 scheduler 使用：检测文件有无变化，有则刷新缓存。
-
-        Returns:
-            bool: True 表示缓存被更新；False 表示没有变化或刷新失败。
-        """
-        old_mtime = self._mtime
-        await self._ensure_file()
-
-        try:
-            current_mtime = PROMPT_FILE.stat().st_mtime
-        except Exception as e:
-            logger.error(
-                "PROMPT 刷新检查失败，保留现有 PROMPT",
-                "zhipu_toolkit",
-                e=e,
-            )
-            return False
-
-        # mtime 未变，无需刷新
-        if old_mtime is not None and current_mtime == old_mtime:
-            return False
-
-        # mtime 变了或首次加载：走统一刷新逻辑
-        await self._refresh(force=True)
-        # 只要刷新成功（内容可能相同也可能不同），mtime 已更新，此次认为“有刷新”
-        return True
+        return self._content or await self._refresh(force=True)
 
 
 PROMPT_CACHE = PromptCache()
@@ -240,9 +195,7 @@ async def get_prompt() -> str:
 
 @scheduler.scheduled_job("interval", minutes=30, id="zhipu_sync_prompt_job")
 async def sync_prompt_job() -> None:
-    changed = await PROMPT_CACHE.refresh_if_changed()
-    if changed:
-        logger.info("PROMPT 文件有更新，已同步到内存", "zhipu_toolkit")
+    await PROMPT_CACHE._refresh(force=True)
 
 
 class ChatConfig:
@@ -250,7 +203,6 @@ class ChatConfig:
     def get(cls, key: str):
         key = key.upper()
         return Config.get_config("zhipu_toolkit", key)
-
 
 
 class PluginConfig(BaseModel, extra=Extra.ignore):

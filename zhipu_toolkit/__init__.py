@@ -23,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="molanp",
-        version="4.2",
+        version="4.3",
         menu_type="群内小游戏",
         superuser_help="""
         超级管理员额外命令
@@ -154,7 +154,14 @@ __plugin_meta__ = PluginMetadata(
                 type=float,
                 help="触发对话后，发送表情包的概率(百分比)",
                 default_value=20,
-            )
+            ),
+            RegisterConfig(
+                key="BLOCK_TIP",
+                value="咱的脑回路是加密的，偷看要收硬币哦！",
+                type=str,
+                help="用户尝试套取人设的回复",
+                default_value="咱的脑回路是加密的，偷看要收硬币哦！",
+            ),
         ],
     ).dict(),
 )

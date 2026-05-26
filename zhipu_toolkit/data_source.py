@@ -29,6 +29,7 @@ from .utils import (
     get_username,
     get_username_by_session,
     msg2str,
+    is_harmful_output,
 )
 
 # ==== 简单的内存缓存，用于减少 normal_chat 频繁扫数据库 ====
@@ -187,6 +188,7 @@ class ChatManager:
             "tool_calls": None,
             "tool_call_id": tool_id,
         }
+
     @classmethod
     @classmethod
     async def _resolve_tool_chain(
@@ -358,6 +360,23 @@ class ChatManager:
             )
             return f"出错了: {result.content}"
 
+        if result.content and await is_harmful_output(
+            msg.extract_plain_text(), result.content
+        ):
+            logger.warning(
+                f"UID {uid} 用户试图套取人设: 封禁用户 {session.user.id} 5 分钟",  # noqa: E501
+                "zhipu_toolkit",
+                session=session,
+            )
+            await BanConsole.ban(
+                session.user.id,
+                None,
+                9999,
+                "试图套取人设",
+                300,
+            )
+            return ChatConfig.get("BLOCK_TIP")
+
         # 模型第一次回复（可能带 tool_calls），先暂存
         round_records.append(cls._build_assistant_record(result.message))
 
@@ -399,12 +418,24 @@ class ChatManager:
             - 否则从数据库加载最近若干条记录，写入缓存并返回。
         """
         if cached_history := _history_cache.get(uid):
-            return [{"role": "system", "content": await get_prompt()}, *cached_history]
+            return [
+                {
+                    "role": "system",
+                    "content": f"BOT_SEC_LAYER\n{await get_prompt()}\nBOT_SEC_LAYER",
+                },
+                *cached_history,
+            ]
 
         # 缓存不存在或已过期，从数据库获取完整历史
         history = await ZhipuChatHistory.get_history(uid)
         _history_cache.set(uid, history)
-        return [{"role": "system", "content": await get_prompt()}, *history]
+        return [
+            {
+                "role": "system",
+                "content": f"BOT_SEC_LAYER\n{await get_prompt()}\nBOT_SEC_LAYER",
+            },
+            *history,
+        ]
 
     @classmethod
     async def call_impersonation_ai(cls, session: Uninfo):
@@ -522,7 +553,7 @@ class ChatManager:
                     )
                     await BanConsole.ban(
                         session.user.id,
-                        session.scene.id if ensure_group(session) else None,
+                        None,
                         9999,
                         "输入内容违规",
                         300,
