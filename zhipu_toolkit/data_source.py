@@ -421,7 +421,7 @@ class ChatManager:
             return [
                 {
                     "role": "system",
-                    "content": f"BOT_SEC_LAYER\n{await get_prompt()}\nBOT_SEC_LAYER",
+                    "content": await get_prompt(),
                 },
                 *cached_history,
             ]
@@ -432,7 +432,7 @@ class ChatManager:
         return [
             {
                 "role": "system",
-                "content": f"BOT_SEC_LAYER\n{await get_prompt()}\nBOT_SEC_LAYER",
+                "content": await get_prompt(),
             },
             *history,
         ]
