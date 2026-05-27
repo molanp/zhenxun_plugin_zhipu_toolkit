@@ -216,19 +216,6 @@ async def is_harmful_output(user_input: str, bot_output: str) -> bool:
     user_input_lower = user_input.lower()
     bot_output_clean = bot_output.strip()
 
-    # 核心安全硬标签
-    SECURITY_TOKEN = "BOT_SEC_LAYER"
-
-    # ====================================================
-    # 1. 第一层：纯文本硬标签匹配（秒杀直球复制）
-    # ====================================================
-    if SECURITY_TOKEN in bot_output:
-        logger.warning(
-            f"[Guardrail] 拦截成功：输出中包含安全硬标签 '{SECURITY_TOKEN}'",
-            "zhipu_toolkit:verify_and_filter_output",
-        )
-        return True
-
     # ====================================================
     # 2. 第二层：动态首尾特征锚定
     # ====================================================
