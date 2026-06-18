@@ -77,22 +77,26 @@ poetry add zai-sdk
 
 ## ⚙️ 配置
 
-|              配置项               |  必填  |      默认值       |                                                                    说明                                                                    |
-| :-------------------------------: | :----: | :---------------: | :----------------------------------------------------------------------------------------------------------------------------------------: |
-|             `API_KEY`             | **是** |      `None`       |                                                              智谱ai的API KEY                                                               |
-|           `CHAT_MODEL`            | **否** |   `glm-4.7-flash`   |                                                            所使用的对话模型代码                                                            |
-|          `IS_MULTIMODAL`          | **否** |      `False`      | 对话模型是否为多模态模型(指GLM-4.1V-Thinking-Flash, GLM-4V-Plus-0111, GLM-4.1V-Thinking-Flash, GLM-4.5V模型)，启用后忽略图像理解模型配置项 |
-|            `PIC_MODEL`            | **否** | `cogview-3-flash` |                                                          所使用的图片生成模型代码                                                          |
-|           `VIDEO_MODEL`           | **否** | `cogvideox-flash` |                                                          所使用的视频生成模型代码                                                          |
-|    `IMAGE_UNDERSTANDING_MODEL`    | **否** |  `glm-4.6v-flash`   |                                                          所使用的图片理解模型代码                                                          |
-|            `CHAT_MODE`            | **否** |      `user`       |                                                   对话分组模式，支持'user','group','all'                                                   |
-|       `IMPERSONATION_MODE`        | **否** |      `False`      |                                                              是否启用伪人模式                                                              |
-| `IMPERSONATION_TRIGGER_FREQUENCY` | **否** |       `20`        |                                                          伪人模式触发频率[0-100]                                                           |
-|       `IMPERSONATION_MODEL`       | **否** |   `glm-4-flash`   |                                                              伪人模式对话模型                                                              |
-|     `IMPERSONATION_BAN_GROUP`     | **否** |       `[]`        |                                                           禁用伪人模式的群组列表                                                           |
-|           `EXPIRE_DAY`            | **否** |        `3`        |                                                  用户对话记录保存时间(天), -1表示永久保存                                                  |
-|           `WORD_LIMIT`            | **否** |      `1000`       |                                                   单次对话消息字数限制(最大值一般为4095)                                                   |
-|         `TEXT_MAX_SPLIT`          | **否** |        `3`        |                                           单次对话消息最大分割段数, 0表示无限分割, -1表示不分割                                            |
+|              配置项               |  必填  |                 默认值                 |                                   说明                                   |
+| :-------------------------------: | :----: | :------------------------------------: | :----------------------------------------------------------------------: |
+|             `API_KEY`             | **是** |                 `None`                 |                           智谱AI平台的 API KEY                           |
+|           `CHAT_MODEL`            | **否** |            `glm-4.7-flash`             |                           所使用的对话模型代码                           |
+|          `IS_MULTIMODAL`          | **否** |                `False`                 | 对话模型是否为多模态模型(一般都为文本模型)，启用后忽略图像理解模型配置项 |
+|            `PIC_MODEL`            | **否** |           `cogview-3-flash`            |                         所使用的图片生成模型代码                         |
+|           `VIDEO_MODEL`           | **否** |           `cogvideox-flash`            |                         所使用的视频生成模型代码                         |
+|    `IMAGE_UNDERSTANDING_MODEL`    | **否** |            `glm-4.6v-flash`            |                         所使用的图像理解模型代码                         |
+|            `CHAT_MODE`            | **否** |                 `user`                 |                对话分组模式，支持 'user'、'group'、'all'                 |
+|       `IMPERSONATION_MODE`        | **否** |                `False`                 |                             是否启用伪人模式                             |
+| `IMPERSONATION_TRIGGER_FREQUENCY` | **否** |                  `20`                  |                    伪人模式触发频率 [0-100]（百分比）                    |
+|       `IMPERSONATION_MODEL`       | **否** |             `glm-4-flash`              |                             伪人模式对话模型                             |
+|     `IMPERSONATION_BAN_GROUP`     | **否** |                  `[]`                  |                          禁用伪人模式的群组列表                          |
+|           `EXPIRE_DAY`            | **否** |                  `3`                   |                用户对话记录保存时间(天)，-1 表示永久保存                 |
+|           `WORD_LIMIT`            | **否** |                 `1000`                 |                 单次对话消息字数限制(最大值一般为 4095)                  |
+|         `TEXT_MAX_SPLIT`          | **否** |                  `3`                   |         单次对话消息最大分割段数，0 表示无限分割，-1 表示不分割          |
+|     `MAX_TOOL_CALLS_PER_TURN`     | **否** |                  `3`                   |           单次对话中允许的最大工具迭代次数，0 表示禁用工具调用           |
+|          `DISABLE_TOOLS`          | **否** |                  `[]`                  |                   禁止 AI 调用的工具名称列表（字符串）                   |
+|       `FACE_SEND_FREQUENCY`       | **否** |                  `20`                  |                   触发对话后发送表情包的概率（百分比）                   |
+|            `BLOCK_TIP`            | **否** | `咱的脑回路是加密的，偷看要收硬币哦！` |                         用户触发安全策略时的提示                         |
 
 ## ⁉️ Q&A
 

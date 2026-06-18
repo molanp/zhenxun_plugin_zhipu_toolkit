@@ -143,10 +143,10 @@ __plugin_meta__ = PluginMetadata(
             ),
             RegisterConfig(
                 key="DISABLE_TOOLS",
-                value=["likeTool"],
+                value=[],
                 type=list,
                 help="禁止ai调用的工具列表",
-                default_value=["likeTool"],
+                default_value=[],
             ),
             RegisterConfig(
                 key="FACE_SEND_FREQUENCY",
@@ -159,7 +159,7 @@ __plugin_meta__ = PluginMetadata(
                 key="BLOCK_TIP",
                 value="咱的脑回路是加密的，偷看要收硬币哦！",
                 type=str,
-                help="用户尝试套取人设的回复",
+                help="用户触发安全策略时的提示",
                 default_value="咱的脑回路是加密的，偷看要收硬币哦！",
             ),
         ],
