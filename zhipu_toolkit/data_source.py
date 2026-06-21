@@ -135,16 +135,16 @@ async def check_video_task_status(task_id: str, action: type[AlconnaMatcher]):
 
             if response.task_status == "SUCCESS":
                 await action.send(Video(url=response.video_result[0].url))
-                return
+                break
 
             elif response.task_status == "FAIL":
-                await action.send(Text("生成失败了。"), reply_to=True)
-                return
-
+                await action.send(Text("生成失败了..."), reply_to=True)
+                break
             await asyncio.sleep(2)
 
         except Exception as e:
-            raise e
+            await action.send(Text(str(e)), reply_to=True)
+            break
 
 
 class ChatManager:
