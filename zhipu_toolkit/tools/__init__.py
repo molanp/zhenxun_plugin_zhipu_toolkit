@@ -26,7 +26,7 @@ class ToolsManager:
         """Call the function of the specified tool."""
         descriptor = registry.get_tool(name)
         if descriptor is None:
-            return "Tool is not found in the registry."
+            return "error: dispatcher_tool_not_found_in_registry"
 
         func = descriptor.func
         sig = inspect.signature(func)
@@ -36,11 +36,11 @@ class ToolsManager:
             try:
                 kwargs = ujson.loads(args)
             except Exception as e:
-                return f"Invalid arguments format: {e}"
+                return f"error: dispatcher_json_parse_failed, bad_arguments_string: {args}, detail: {e!s}"
         elif isinstance(args, dict):
             kwargs = args
         else:
-            return "Tool arguments must be a JSON string or a dict."
+            return f"error: dispatcher_invalid_carrier_type, expected: json_string_or_dict, got: {type(args).__name__}"
 
         if "session" in parameters:
             kwargs["session"] = session
