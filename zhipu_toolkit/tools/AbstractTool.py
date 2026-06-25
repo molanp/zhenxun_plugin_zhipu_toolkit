@@ -98,7 +98,6 @@ class ToolRegistry:
     @classmethod
     def disable_tools(cls, tools: list[str]) -> None:
         cls._disabled_tools.update(tools)
-        # 移除已注册的禁用工具
         for tool_name in tools:
             if tool_name in cls._registry:
                 del cls._registry[tool_name]

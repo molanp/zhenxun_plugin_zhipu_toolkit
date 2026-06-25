@@ -10,9 +10,6 @@ from zhenxun.services.log import logger
 from .AbstractTool import registry
 
 
-
-
-
 class ToolsManager:
     @classmethod
     async def init(cls, disable_tools: list[str] | None = None) -> None:
@@ -51,11 +48,11 @@ class ToolsManager:
         try:
             return await func(**kwargs)
         except TypeError as e:
-            logger.error("参数类型错误", "zhipu_toolkit.tools", e=e)
-            return "参数数量不符"
+            logger.error("参数类型或数量错误", "zhipu_toolkit.tools", e=e)
+            return f"error: runner_arguments_mismatch, detail: {e!s}"
         except Exception as e:
             logger.error(f"调用工具 {name} 失败", "zhipu_toolkit.tools", e=e)
-            return f"{type(e)},{e}"
+            return f"error: tool_internal_critical_failure, exception_type: {type(e).__name__}, detail: {e!s}"
 
     @classmethod
     async def reload_tools(cls) -> None:
