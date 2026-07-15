@@ -8,6 +8,8 @@
 > 插件需要智谱AI的API KEY，请安装插件后在`data/config.yaml`中配置，保存文件后插件会自动重载
 >
 > 插件默认使用平台的免费模型，只需注册即可，无任何花费
+>
+> 关于清理旧版本残留的大量调用统计记录，删除方式可以查看页面底部
 
 > [!NOTE]
 > **关于模型选择**
@@ -100,8 +102,45 @@ poetry add zai-sdk
 
 ## ⁉️ Q&A
 
-- **Q:** 什么是伪人模式
-- 开启此模式后，bot会如同真人一般，读取最近20条群友的聊天记录，然后根据这些内容进行发言。此模式默认触发概率为20%，可以通过配置`IMPERSONATION_TRIGGER_FREQUENCY`进行修改.
+### **Q:** 什么是伪人模式
+
+开启此模式后，bot会如同真人一般，读取最近20条群友的聊天记录，然后根据这些内容进行发言。此模式默认触发概率为20%，可以通过配置`IMPERSONATION_TRIGGER_FREQUENCY`进行修改.
+
+### **Q:** 如何删除旧版本(3.1之前)残留的大量调用记录？
+
+这里假设你在修复版本发布后(2025-11-19 00:00:00)即更新了插件，若不是，请自行改变该时间
+
+依次在数据库管理软件中执行下面两个sql语句，或在开头添加`exec `后发送给bot
+
+该语句仅适用于PostgreSQL，其他数据库同理
+
+清理数据库
+
+```sql
+DELETE FROM statistics
+WHERE id IN (
+    SELECT id
+    FROM (
+        SELECT id,
+               create_time,
+               LAG(create_time) OVER (
+                   PARTITION BY user_id, COALESCE(group_id, 'private')
+                   ORDER BY create_time ASC
+               ) as prev_time
+        FROM statistics
+        WHERE plugin_name = 'zhipu_toolkit'
+          AND create_time < '2025-11-19 00:00:00'
+    ) t
+    WHERE t.prev_time IS NOT NULL 
+      AND (t.create_time - t.prev_time) <= interval '5 second'
+);
+```
+
+优化数据库索引
+
+```sql
+VACUUM FULL ANALYZE statistics;
+```
 
 ## 感谢
 
