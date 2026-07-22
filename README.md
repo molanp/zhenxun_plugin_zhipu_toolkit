@@ -4,6 +4,8 @@
 
 一次安装，多种功能
 
+**若您只关心聊天功能，并且希望使用非智谱模型，您可以查看此项目[chat-toolkit](https://github.com/molanp/zhenxun_plugin_chat_toolkit)**
+
 > [!IMPORTANT]
 > 插件需要智谱AI的API KEY，请安装插件后在`data/config.yaml`中配置，保存文件后插件会自动重载
 >
